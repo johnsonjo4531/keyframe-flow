@@ -27,6 +27,18 @@ follows a keep-a-changelog style and the version numbers follow
   stories with zero console errors (previously every playback story rendered
   "Illegal invocation — The component failed"); unit (245), browser (20),
   lint, format, and type checks all green.
+- Enabled the Storybook Code panel so every published example shows its
+  source (T47): `parameters.docs.codePanel: true` in
+  `examples/.storybook/preview.tsx`, plus the required
+  `@storybook/addon-docs` dev dependency registered in `.storybook/main.ts`
+  (the panel is a docs-addon contribution and stays hidden without it). The
+  addon's auto-generated `<Component {...args}/>` snippet renders as `<l …/>`
+  in minified builds, so a small `enforce: "pre"` Vite plugin appends each
+  story module's verbatim TSX source into `meta.parameters.docs.source.code`
+  (the panel's highest-precedence source key), giving readers the real
+  example code — imports, animation definitions and all. Playwright-verified:
+  the Code tab opens for all 18 stories with authored source and zero console
+  errors.
 
 ### Milestone 6 — User Documentation (T38–T45)
 

@@ -72,7 +72,7 @@ Depends on Milestones 3–5: the storybook examples demonstrate playback and ren
 Discovered via Playwright inspection of the built Storybook (`site/storybook`): every story that drives playback renders "Illegal invocation — The component failed" with a `TypeError` thrown from the scheduler's frame-request path in the browser bundle.
 
 46. [x] Fix the Storybook runtime failure where all animated stories throw `TypeError: Illegal invocation`: `resolveFrameHost` in `src/timing/scheduler.ts` captures unbound `globalThis.requestAnimationFrame`/`cancelAnimationFrame` references and later invokes them as methods of a plain `{ request, cancel }` host object, so the browser rejects the wrong `this` (§16). Wrap/bind the frame functions so rAF is always called with the environment as receiver; add a Chromium browser-suite regression test that drives real playback through the default `createFrameScheduler()` path (the suite currently only covers the Node timer fallback in `timing.test.ts`, which is why 245 unit + 17 browser tests stayed green); rebuild Storybook and verify all 18 stories render with zero console errors.
-47. [ ] Show the source of every example by enabling Storybook's Code panel: set `parameters.docs.codePanel = true` in `examples/.storybook/preview.ts` so it applies to all stories (the recommended project-wide location); rebuild `site/storybook` and verify the Code tab renders alongside the canvas for each story.
+47. [x] Show the source of every example by enabling Storybook's Code panel: set `parameters.docs.codePanel = true` in `examples/.storybook/preview.ts` so it applies to all stories (the recommended project-wide location); rebuild `site/storybook` and verify the Code tab renders alongside the canvas for each story.
 
 ## Phases
 
@@ -130,4 +130,4 @@ Discovered via Playwright inspection of the built Storybook (`site/storybook`): 
 
 ## Phase 14 — Storybook code panel
 
-- [ ] Complete: T47
+- [x] Complete: T47

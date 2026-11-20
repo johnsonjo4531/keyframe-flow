@@ -10,6 +10,7 @@
   "scripts": {},
   "devDependencies": {
     "@clean-jsdoc-theme/typedoc": "^5.3.0",
+    "@storybook/addon-docs": "^10.6.7",
     "@storybook/react": "^10.6.7",
     "@storybook/react-vite": "^10.6.7",
     "@types/react": "^19.3.0",
@@ -21,5 +22,12 @@
     "storybook": "^10.6.7",
     "typedoc": "^0.28.20",
     "vite-plus": "^1.7.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.21.0",
+      "onFail": "download"
+    }
   }
 }

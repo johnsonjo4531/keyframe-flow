@@ -1,22 +1,23 @@
+docs(storybook): show real example source in the Code panel (T47)
 
-fix(timing): bind frame host methods so rAF keeps its environment receiver (T46)
+Every published example now renders its authored TSX next to the live
+canvas, so readers see actual keyframe-flow usage — imports, animation
+definitions, adapter wiring — not just a running demo.
 
-Every animated Storybook story failed at play() with "TypeError: Illegal
-invocation"; Playwright stack traces pinpointed the scheduler's frame-request
-path in the shipped bundle.
-
-- resolveFrameHost captured globalThis.requestAnimationFrame/
-  cancelAnimationFrame as unbound references and later called them as
-  methods of the plain { request, cancel } frame-host object, so Chromium
-  rejected the wrong `this`. Frame functions are now wrapped so rAF/cAF
-  always run with globalThis as receiver; environment resolution still
-  happens at call time (§2 principle 1: no browser APIs at import time).
-- Regression coverage: src/timing/scheduler.browser.test.ts drives the
-  default browser path in Chromium — a real rAF tick, cancelling a pending
-  frame, and full playback through the lazily created shared engine with no
-  injected clock or scheduler. The suite previously only exercised the Node
-  timer fallback, which is how the defect survived an otherwise green build.
-- Verified with Playwright against the rebuilt static Storybook: all 18
-  stories render with zero console errors (headless GL driver performance
-  notes on the WebGL story are benign). Unit (245), browser (20), lint,
-  format, and type checks all green.
+- Enable the Code panel project-wide via `parameters.docs.codePanel: true`
+  in examples/.storybook/preview.tsx (the recommended global location).
+- Add @storybook/addon-docs (^10.6.7) as a devDependency and register it in
+  examples/.storybook/main.ts — the Code panel is contributed by the docs
+  addon's manager entry, so the parameter alone does nothing without it.
+- Inject real story source with a small `enforce: "pre"` Vite plugin
+  (`injectStorySourcePlugin`): Storybook's auto-generated
+  `<Component {...args}/>` snippet renders as `<l …/>` in minified builds,
+  and neither `source.type: "static"` nor `originalSource` outrank it. The
+  plugin appends each `.stories.tsx` module's verbatim source into
+  `meta.parameters.docs.source.code`, the panel's highest-precedence key,
+  matching the files' uniform `const meta = …; export default meta;` shape.
+- Documented the mechanism in docs/contributing-docs.md (Storybook section).
+- Verified with Playwright against the rebuilt static site: all 18 stories
+  open a Code tab containing authored TSX (`import { Animation, target }
+  from "keyframe-flow"` etc.), zero console errors; examples tsc, unit suite
+  (245), and vp check all green.

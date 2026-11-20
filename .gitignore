@@ -3,3 +3,6 @@ dist/
 site/
 .vitest/
 *.local
+
+# Playwright MCP session artifacts
+.playwright-mcp/
