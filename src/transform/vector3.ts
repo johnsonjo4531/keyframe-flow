@@ -1,18 +1,39 @@
 /**
- * Any value that can be read as a 3D vector.
+ * Any `{x, y, z}` object readable as a 3D vector — the structural form of
+ * `Vector3Like`.
  */
-export type Vector3Like =
-  | Readonly<{ x: number; y: number; z: number }>
-  | readonly [number, number, number];
+export interface Vector3Object {
+  /** X coordinate. */
+  readonly x: number;
+  /** Y coordinate. */
+  readonly y: number;
+  /** Z coordinate. */
+  readonly z: number;
+}
+
+/**
+ * Any value that can be read as a 3D vector: an `Vector3Object`, or a
+ * `[x, y, z]` tuple (§4).
+ */
+export type Vector3Like = Vector3Object | readonly [number, number, number];
 
 /**
  * An immutable 3D vector in the library's right-handed coordinate system (§4.4).
  *
  * All operations return new vectors; instances are never mutated (§4.2).
+ *
+ * @example
+ * ```ts
+ * const v = new Vector3(1, 2, 3);
+ * const unit = v.normalize(); // (0.267, 0.535, 0.802) — new vector, `v` intact
+ * ```
  */
 export class Vector3 {
+  /** X coordinate. */
   readonly x: number;
+  /** Y coordinate. */
   readonly y: number;
+  /** Z coordinate. */
   readonly z: number;
 
   constructor(x = 0, y = 0, z = 0) {
@@ -21,6 +42,7 @@ export class Vector3 {
     this.z = z;
   }
 
+  /** The zero vector `(0, 0, 0)`. */
   static zero(): Vector3 {
     return new Vector3(0, 0, 0);
   }
@@ -88,6 +110,13 @@ export class Vector3 {
     return new Vector3(this.x / len, this.y / len, this.z / len);
   }
 
+  /**
+   * Element-wise comparison within `epsilon` (inclusive). Accepts any
+   * `Vector3Like`.
+   * ```ts
+   * new Vector3(1, 2, 3).equals([1, 2, 3]); // true
+   * ```
+   */
   equals(other: Vector3Like, epsilon = 0): boolean {
     const v = other instanceof Vector3 ? other : Vector3.from(other);
     return (
@@ -97,6 +126,7 @@ export class Vector3 {
     );
   }
 
+  /** The `[x, y, z]` tuple form, for upload paths and destructuring. */
   toArray(): [number, number, number] {
     return [this.x, this.y, this.z];
   }

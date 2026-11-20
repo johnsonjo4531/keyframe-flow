@@ -1,9 +1,23 @@
 import { Vector3, type Vector3Like } from "./vector3.ts";
 
 /**
- * Any value that can be read as a quaternion `{x, y, z, w}`.
+ * Any value that can be read as a quaternion `{x, y, z, w}` (§4.3).
  */
-export type QuaternionLike = Readonly<{ x: number; y: number; z: number; w: number }>;
+export interface QuaternionObject {
+  /** Vector part X. */
+  readonly x: number;
+  /** Vector part Y. */
+  readonly y: number;
+  /** Vector part Z. */
+  readonly z: number;
+  /** Scalar part. */
+  readonly w: number;
+}
+
+/**
+ * Any value that can be read as a quaternion `{x, y, z, w}` (§4.3).
+ */
+export type QuaternionLike = QuaternionObject;
 
 /**
  * An immutable unit-friendly quaternion used as the library's internal
@@ -13,11 +27,21 @@ export type QuaternionLike = Readonly<{ x: number; y: number; z: number; w: numb
  * Multiplication follows matrix conventions for column vectors:
  * `a.multiply(b)` produces the rotation that applies `b` first and then `a`,
  * mirroring `A × B` in §4.4.
+ *
+ * @example
+ * ```ts
+ * const turn = Quaternion.fromEuler(0, Math.PI / 2, 0); // yaw 90°, radians only
+ * turn.rotateVector([1, 0, 0]); // Vector3 ≈ (0, 0, −1) — right-handed
+ * ```
  */
 export class Quaternion {
+  /** Vector part X. */
   readonly x: number;
+  /** Vector part Y. */
   readonly y: number;
+  /** Vector part Z. */
   readonly z: number;
+  /** Scalar part. */
   readonly w: number;
 
   constructor(x = 0, y = 0, z = 0, w = 1) {
@@ -27,6 +51,7 @@ export class Quaternion {
     this.w = w;
   }
 
+  /** The identity rotation `(0, 0, 0, 1)` — no rotation at all. */
   static identity(): Quaternion {
     return new Quaternion(0, 0, 0, 1);
   }
@@ -170,6 +195,11 @@ export class Quaternion {
     );
   }
 
+  /**
+   * Component-wise comparison within `epsilon` (inclusive). Note `q` and `-q`
+   * describe the same orientation but do not compare equal here — use
+   * `Quaternion#dot` (`|dot| ≈ 1`) for orientation equality.
+   */
   equals(other: QuaternionLike, epsilon = 0): boolean {
     const q = Quaternion.from(other);
     // q and -q describe the same orientation; compare without a sign flip so
@@ -182,6 +212,42 @@ export class Quaternion {
     );
   }
 
+  /**
+   * Decomposes this rotation into Euler angles in radians, in the inverse of
+   * `Quaternion.fromEuler`'s intrinsic X → Y → Z convention (the angles
+   * whose `Rx · Ry · Rz` matrix reproduces this orientation).
+   * Angles are chosen by principal-value `asin`/`atan2`, so results need not
+   * match any particular authored triple numerically — only the resulting
+   * orientation. At the gimbal-lock poses (Y at ±90°) the X and Z angles are
+   * ambiguous; this decomposition resolves them by convention with Z set to
+   * zero. Used by angular rotation tracks (§9.1) when authored angles are not
+   * available.
+   */
+  toEuler(): readonly [number, number, number] {
+    const q = this.normalize();
+    const { x, y, z, w } = q;
+
+    // Matrix entries of R(q) in the library's column-vector convention:
+    // row0col2 = sin(Y). Clamp before asin against float drift.
+    const m02 = 2 * (x * z + w * y);
+    const yAngle = Math.asin(Math.min(1, Math.max(-1, m02)));
+
+    if (Math.abs(m02) < 1 - 1e-9) {
+      const m00 = 1 - 2 * (y * y + z * z);
+      const m01 = 2 * (x * y - w * z);
+      const m12 = 2 * (y * z - w * x);
+      const m22 = 1 - 2 * (x * x + y * y);
+      return [Math.atan2(-m12, m22), yAngle, Math.atan2(-m01, m00)];
+    }
+
+    // Gimbal lock: only the combined X±Z rotation is determined; set Z to 0.
+    const m10 = 2 * (x * y + w * z);
+    const m11 = 1 - 2 * (x * x + z * z);
+    const combined = Math.atan2(m10, m11);
+    return [m02 > 0 ? combined : -combined, yAngle, 0];
+  }
+
+  /** The `[x, y, z, w]` tuple form (Hamilton order). */
   toArray(): [number, number, number, number] {
     return [this.x, this.y, this.z, this.w];
   }

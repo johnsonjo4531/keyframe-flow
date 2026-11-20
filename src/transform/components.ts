@@ -8,7 +8,10 @@ import type { Vector3 } from "./vector3.ts";
  * at runtime.
  */
 export interface TransformComponents {
+  /** Translation component. */
   position: Vector3;
+  /** Rotation component (unit quaternion). */
   rotation: Quaternion;
+  /** Per-axis scale component; non-negative by construction (§4.3). */
   scale: Vector3;
 }

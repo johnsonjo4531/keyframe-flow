@@ -1,0 +1,26 @@
+{
+  // Type-checking for Storybook stories and their shared helpers. The main
+  // tsconfig covers the library core only (§2 principle 1: the core must not
+  // see DOM types); this project adds the browser + React environment that
+  // examples legitimately live in, plus the `keyframe-flow` alias matching
+  // .storybook/main.ts so stories exercise the working tree.
+  "extends": "../tsconfig.json",
+  // NOTE: plain ".storybook" never matches — TypeScript's include globs skip
+  // dot-prefixed directories, so list the config files explicitly.
+  "include": ["stories", ".storybook/main.ts", ".storybook/preview.ts"],
+  "compilerOptions": {
+    "rootDir": "..",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    // Stories are bundled by Vite (extensionless imports), so check them in
+    // bundler resolution mode rather than NodeNext.
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "jsx": "react-jsx",
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "paths": {
+      "keyframe-flow": ["../src/index.ts"]
+    }
+  }
+}

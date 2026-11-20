@@ -6,6 +6,231 @@ follows a keep-a-changelog style and the version numbers follow
 
 ## 0.0.0
 
+### Milestone 6 — User Documentation (T38–T45)
+
+- Authored seven user-facing guides in `docs/` with frontmatter
+  `title`/`group`/`order` for sidebar grouping: getting started, core concepts
+  & coordinate conventions (§4.4), animation authoring styles (§5), easing &
+  interpolation (§8, §9), playback & lifecycle (§11–§13), render adapters &
+  custom targets (§17), and `contributing-docs.md` documenting the docs
+  pipeline itself; `README.md` serves as the library landing page and links
+  `design-docs/vision.md` as the internal source of truth rather than
+  duplicating it.
+- Set up the API reference with TypeDoc + clean-jsdoc-theme v5
+  (`@clean-jsdoc-theme/typedoc`) via root `typedoc.json`: entry point
+  `src/index.ts`, output `site/docs`, theme block with `siteName`, `basePath`
+  `/keyframe-flow/docs` (GitHub Pages project-site hosting), `siteUrl`
+  (enables sitemap.xml), `docs: "docs"` + `docGroups` for prose sidebar
+  ordering, `menu` links to the storybook, and `strict: true` — the build
+  passes with zero warnings. Inline type-literal members cannot carry JSDoc,
+  so undocumented public shapes were extracted into named exported interfaces
+  (`Vector3Object`, `QuaternionObject`, `DOMPointInput`, `DOMPointOutput`,
+  `PlaybackFinishedResult`, `PlaybackCancelledResult`).
+- Documented every remaining public export (all 113 previously-undocumented
+  symbols, including the `Matrix4` `m11`–`m44` DOMMatrix members) with
+  descriptions, `@param`/`@returns`, runnable `@example` blocks, and `{@link}`
+  cross-references. JSDoc summaries were rewritten to be link-free because the
+  theme renders summaries as plain text in `<meta>` descriptions and
+  pagination cards — body content with links now lives under `@remarks`.
+- Set up a real Storybook (React renderer, Vite builder via
+  `@storybook/react-vite`) in `examples/.storybook` with stories in
+  `examples/stories/**/*.stories.tsx`; each story mounts a live keyframe-flow
+  animation into a React host and exposes duration/easing/transport controls.
+  The library resolves through an absolute `keyframe-flow` → `src/index.ts`
+  alias so stories always exercise the working tree. Eighteen stories cover
+  from/to & property-level definitions (§5.2, §7), static keyframes +
+  generator sources (§5.3–§5.5), all 26 named easings plus custom curves (§8),
+  SLERP shortest-path vs. angular full-revolution tracks (§9), manual-sampling
+  into an external render loop (§10.3), playback controls, repetition, and
+  target-supersede lifecycle (§11–§13), and HTML/SVG/Canvas/WebGL/WebGPU
+  adapters plus a structural custom target (§17). Stories are type-checked by
+  `examples/tsconfig.json` (`make typecheck-examples`).
+- Unified GitHub Pages hosting as one site staged in `site/`: API reference +
+  guides under `site/docs/`, storybook under `site/storybook/`, and a
+  self-contained dark/light landing page (authored as `docs/site-index.html`)
+  linking both. `site/.nojekyll` is required because the theme's
+  `_assets/`-prefixed files would otherwise be stripped by Jekyll; the
+  Makefile's `github_pages_deploy` target passes `gh-pages --dotfiles` so it
+  publishes. Storybook 10 emits subpath-portable relative asset URLs, so no
+  base-path flag is needed (and none exists).
+- Verified the full docs pipeline end to end without pushing: `make
+  build-docs` (zero warnings), `make build-storybook` (18 stories), local
+  preview of `site/` under a `/keyframe-flow/` prefix returning 200 for all
+  surfaces and assets, an automated link audit (7.7k root-absolute + 22
+  relative hrefs, 742 in-page anchors — zero broken), no raw `{@link}` text
+  leaking into rendered pages, and mobile viewport + dark-mode sanity across
+  landing, docs, and storybook.
+
+### Milestone 5 — Advanced Capabilities (T32–T37, §9, §14)
+
+- Implemented `target.webgl(options)` and `target.webgpu(options)` adapters
+  (§3.6): each owns only rendering state — the latest evaluated transform as a
+  column-major `Float32Array` in the exact layout `gl.uniformMatrix4fv`/GLSL
+  `mat4` and WGSL `mat4x4<f32>` consume (§15) — plus an optional `onTransform`
+  upload hook. No GPU resources are created, playback time and lifecycle are
+  never touched, disposal destroys nothing (Appendix B.8), and hosts can poll
+  `matrixValues` or copy into existing buffers via `copyMatrixValuesTo`
+  without allocation (§2.9). Verified against a real WebGL context in the
+  Chromium browser suite (uniform round-trip through `gl.getUniform`).
+- Implemented property-level composition via animated-property tracks
+  (§14): `animatedProperties` detects which of position/rotation/scale an
+  animation actually changes (including wobble that returns to its start
+  value), and `Animation.combine([move, rotate, scale])` merges inputs per
+  property — each input overrides only the properties it animates, later
+  inputs win overlaps with no additive composition, and shorter inputs hold
+  their final value once complete. Composition required zero engine changes.
+- Implemented angular rotation tracks (§9.1): `rotationMode: "angular"`
+  interpolates authored Euler angles in radians component-wise so a segment
+  from `0` to `2π` performs one full revolution without intermediate
+  keyframes — the case shortest-path quaternion SLERP collapses to a no-op,
+  which is tested explicitly. Authored `[x, y, z]` rotations are captured
+  verbatim during eager normalization; quaternion-only inputs decompose via
+  the new `Quaternion#toEuler` (inverse of `fromEuler`'s intrinsic X→Y→Z
+  convention, with a documented gimbal-lock resolution), round-trip-verified
+  over a deterministic 250-sample orientation sweep.
+- Implemented animation groups and nested timelines (§14, §19):
+  `Animation.group(children)` sequences children back to back over the summed
+  duration; `{ layout: "parallel" }` runs them simultaneously with
+  combine-style property merging. Groups are ordinary `Animation` values, so
+  nesting composes naturally (groups of groups tested).
+- Added explicit advanced raw-matrix interpolation (§9.2):
+  `interpolation: "raw-matrix"` samples through element-wise `Matrix4#lerp`
+  of endpoint matrices; results that are not TRS-decomposable (interpolated
+  rotations gain shear) throw explicitly rather than being approximated, and
+  conflicting option combinations (`angular` + `raw-matrix`) throw at
+  definition time.
+
+### Milestone 4 — Render Adapters (T27–T31, §17)
+
+- Defined the structural `RenderTarget { setTransform(matrix); dispose?() }`
+  interface (§17.1): custom rendering systems need no library base class or
+  imports; adapters own rendering state only and never playback time or
+  lifecycle (§3.6, §17.2). `Playback.dispose()` invokes the adapter's optional
+  cleanup hook but never destroys host resources (Appendix B.8).
+- Implemented `target.html(element)`: writes CSS `matrix3d()` values in
+  column-major argument order (no transposition), replaces any pre-existing
+  inline transform since the adapter owns that property, and supports an
+  optional one-time `transformOrigin` (§17, §17.3).
+- Implemented `target.svg(element)`: writes SVG 1.1 `matrix(a, b, c, d, e, f)`
+  transform attributes mapped from column vectors; documents that SVG 1.1 is
+  inherently 2D affine so Z/perspective members are not expressible (§17).
+- Implemented `target.canvas(context)`: projects the evaluated 4×4 matrix
+  through an explicit `projectToCanvas2D` step (homogeneous images of the
+  origin and X/Y axes, perspective division, optional camera distance) rather
+  than forwarding a raw matrix Canvas cannot apply; `setTransform` owns the
+  context CTM deterministically (§17.3). Pure affine inputs reduce exactly to
+  their affine part.
+- Added adapter behavior tests: unit tests for the pure conversion/projection
+  math, and Chromium browser tests verifying real DOM/canvas interop (browser
+  CSS parser agreement via native `DOMMatrix`, context CTM checks), custom
+  structural targets working with zero engine changes, supersede/dispose
+  ownership, and that disposing playback leaves elements, contexts, and custom
+  objects fully intact (§17.2, §21).
+
+### Milestone 3 — Playback Engine (T18–T26, §11–§14, §16)
+
+- Added injectable time sources (§16): `Clock { now() }` and
+  `Scheduler { request(cb); cancel(handle) }` as separate interfaces — the
+  clock provides time while the scheduler coordinates updates (Appendix B.7).
+  `systemClock` uses `performance.now()`/`Date.now()`; `createFrameScheduler()`
+  resolves `requestAnimationFrame` in browsers and a timer fallback elsewhere
+  at first use, so importing the library never touches browser APIs.
+  `ManualClock` and `ManualScheduler` provide fully deterministic
+  test/Node-friendly alternatives.
+- Implemented the centralized `PlaybackEngine`: drives all active playbacks
+  from one shared frame request, advances time from clock timestamps (never
+  frame counts), scales elapsed deltas by `playbackRate` so rate changes never
+  jump time, and requests no further frames when nothing is active (§16). A
+  lazily created default engine backs playbacks that do not inject their own.
+- Implemented `animation.attach(target?)` creating independent `Playback`
+  instances with their own execution state and lifecycle while sharing the
+  definition's immutable timeline; attachment without a target supports pure
+  time control (§11). Options: `iterations`, `direction`, `playbackRate`,
+  `autoplay`, and custom `engine`.
+- Implemented the full §11.1/§12 playback surface: `state`, `currentTime`
+  (elapsed ms within the current iteration), per-run `finished` promise,
+  settable `playbackRate`, `play`/`pause`/`reverse`/`seek`/`seekProgress`/
+  `cancel`/`dispose`. Play on a finished instance restarts from the beginning
+  in the current direction; pausing retains time; seeking clamps and renders
+  immediately.
+- Implemented completion behavior (§11.1, §12): `finished` resolves
+  `{ status: "finished" | "cancelled" }` per run and never rejects on ordinary
+  cancel; `cancel()` retains the last rendered transform (no original-state
+  capture); `dispose()` is idempotent, settles pending promises, and all other
+  operations on disposed instances throw.
+- Implemented repetition and direction in the engine (§13): single, finite
+  counts including the initial iteration, infinite runs that never naturally
+  complete, reverse, and alternate/alternate-reverse playback across many
+  boundary crossings per frame — keyframes are never duplicated.
+- Implemented target replacement semantics (§14): one active playback owns a
+  render target via a structural `RenderTarget { setTransform(matrix);
+  dispose?() }` interface (T27 groundwork, §17.1); starting another playback
+  on the same target supersedes (cancels) the existing owner with no implicit
+  additive composition; disposal never destroys the underlying target
+  (Appendix B.8).
+- Added 31 unit tests (200 total) covering clock/scheduler contracts, frame
+  request economy, every §12 state and transition, restart-in-direction, rate
+  continuity, zero-duration runs, finite/infinite/alternate repetition,
+  supersede of running and paused owners, per-run promises, disposal
+  idempotence and throw-after-dispose, and determinism of identical tick
+  streams.
+
+### Milestone 2 — Animation Definitions (T10–T17, §5–§10)
+
+- Added the animation subsystem (`src/animation/`) with keyframe types
+  `Keyframe<T>` and `TransformKeyframe { at, transform, easing? }`, where
+  `at` is normalized progress in `[0, 1]`, independent of millisecond
+  duration (§6.1, §6.2).
+- Implemented `Animation.from()` as the single construction entry point
+  (§5.1), accepting from/to definitions (§5.2), static keyframe arrays
+  (§5.3), and generator-produced keyframes (§5.4). Definitions are
+  immutable and reusable; generators are authoring mechanisms, not playback
+  mechanisms (Appendix B.2).
+- Implemented eager keyframe normalization: arrays, synchronous iterables,
+  generator instances, and functions returning iterables are consumed
+  exactly once when the definition is created (§5.5); the resulting frozen
+  timeline is shared by every consumer, named easings are resolved eagerly,
+  async iterables/generators are rejected explicitly, and sampling never
+  re-executes a source.
+- Implemented keyframe validation (§6.3): timestamps must be finite numbers
+  in `[0, 1]`, strictly increasing, with no duplicates; empty timelines
+  throw; a single keyframe yields a constant animation; missing endpoints
+  hold the first/last value; out-of-order or duplicate timestamps throw —
+  keyframes are never silently reordered.
+- Implemented from/to definitions normalized into the same two-keyframe
+  timeline at `at = 0` and `at = 1`, with millisecond durations validated
+  to be finite and non-negative (§5.2, §6.2).
+- Implemented property-level definitions (§7): partial
+  `{ position, rotation, scale }` objects (Euler radians or quaternions,
+  uniform-scale shorthand) merge into the canonical transform
+  representation; unspecified properties are preserved from the explicit
+  starting transform, falling back to documented identity defaults.
+- Implemented easing (§8): 26 built-in named easings covering linear plus
+  CSS `ease`/`ease-in`/`ease-out`/`ease-in-out` (via a Newton-Raphson +
+  bisection cubic-bezier solver) and the sine/quad/cubic/quart/quint/expo/
+  circ in/out/in-out families; custom `(progress) => number` functions need
+  no registration; animation-level easing provides the default while
+  per-keyframe easing controls interpolation to the next keyframe; unknown
+  names throw eagerly at definition time.
+- Implemented property-aware interpolation (§9): translation and scale
+  interpolate linearly, 3D rotation uses quaternion SLERP with input
+  normalization and shortest-path default (§9.1), pure-Z (2D) rotations use
+  direct angular interpolation with shortest-path wrapping; raw element-
+  wise matrix interpolation is never the default and midpoints of two
+  transforms always decompose cleanly to TRS.
+- Implemented manual sampling as a first-class feature (§10):
+  `animation.sample(ms)` and `animation.sampleProgress(p)` evaluate the
+  same timeline (500 ms of a 2000 ms animation equals 0.25 progress),
+  out-of-range inputs clamp to the boundaries, exact keyframe hits return
+  the authored transforms, non-finite inputs throw, and sampling requires
+  no scheduler or render target and never mutates the definition (§10.3).
+- Added 107 unit tests (Node; 169 total) covering eager generator
+  execution, shared frozen timelines, every §6.3 validation rule, property-
+  level merge semantics, easing curve endpoints/monotonicity/CSS-curve
+  values, segment-easing precedence, SLERP shortest-path and 2D angular
+  equivalence, non-default matrix behavior, and sampling equivalence,
+  clamping, endpoint holds, and determinism.
+
 ### Milestone 1 — Transform and Matrix Foundations (T1–T9, §4, §9, §15)
 
 - Set up Vite+ (`vp`) tooling: library build config in `vite.config.ts`,

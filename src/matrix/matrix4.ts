@@ -20,6 +20,14 @@ const ORTHONORMAL_EPSILON = 1e-6;
  * matching WebGL/GLSL and `DOMMatrix`'s column-major array layout (§15.2).
  *
  * Instances are immutable; every operation returns a new matrix (§4.2).
+ *
+ * @example
+ * ```ts
+ * import { matrix, Quaternion } from "keyframe-flow";
+ *
+ * const m = matrix.fromTRS({ position: [10, 0, 0], rotation: Quaternion.identity() });
+ * m.el(12); // 10 — translation x at column-major index 12 (§15)
+ * ```
  */
 export class Matrix4 {
   /** Column-major storage: index `column * 4 + row`. */
@@ -51,6 +59,7 @@ export class Matrix4 {
     this.elements = elements;
   }
 
+  /** The identity matrix — multiplying by it changes nothing. */
   static identity(): Matrix4 {
     return new Matrix4();
   }
@@ -271,6 +280,12 @@ export class Matrix4 {
   /**
    * Composes position, rotation, and scale into the canonical matrix
    * `T × R × S` (§3.3): a point is scaled first, then rotated, then translated.
+   *
+   * @example
+   * ```ts
+   * const m = Matrix4.fromTRS([10, 20, 0], Quaternion.identity(), [2, 2, 2]);
+   * // Composes T × R × S — scale applies to the point first (§4.4).
+   * ```
    */
   static fromTRS(position: Vector3Like, rotation: Quaternion, scale: Vector3Like): Matrix4 {
     const p = Vector3.from(position);
@@ -424,6 +439,28 @@ export class Matrix4 {
       }
     }
     return true;
+  }
+
+  /**
+   * Raw element-wise linear interpolation between two matrices — an explicit
+   * advanced escape hatch (§9.2), never the default transform interpolation.
+   * The result is generally not TRS-decomposable (interpolated rotations gain
+   * shear); decompose it only when the inputs justify it, and accept the
+   * explicit throw otherwise. See `Animation`'s `interpolation: "raw-matrix"`
+   * option for animation-level use.
+   */
+  lerp(other: Matrix4, t: number): Matrix4 {
+    if (!(other instanceof Matrix4)) {
+      throw new TypeError("Matrix4#lerp() requires another Matrix4.");
+    }
+    if (typeof t !== "number" || !Number.isFinite(t)) {
+      throw new TypeError("Matrix4#lerp() requires a finite interpolation parameter.");
+    }
+    const out = new Float64Array(16);
+    for (let i = 0; i < 16; i++) {
+      out[i] = (this.el(i) as number) + ((other.el(i) as number) - (this.el(i) as number)) * t;
+    }
+    return new Matrix4(out);
   }
 
   /**

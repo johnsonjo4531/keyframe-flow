@@ -909,6 +909,14 @@ These capabilities may be introduced as separate extensions or future releases.
 - Animation groups and timelines.
 - Additional matrix and interpolation extensions.
 
+### Milestone 6: User Documentation
+
+- User-facing guides in a dedicated documentation folder; README landing page for the library.
+- API reference generated from doc comments using TypeDoc with clean-jsdoc-theme v5.
+- Storybook of live examples (React renderer, Vite builder) covering authoring styles, easing, interpolation, playback, and render adapters.
+- Single GitHub Pages site hosting documentation and storybook side by side under one deployment.
+- Makefile-driven documentation/storybook builds with a `github_pages_deploy` target for the combined site.
+
 ## 21. Success Criteria
 
 The design is successful if:

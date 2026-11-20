@@ -8,8 +8,11 @@ import type { TransformComponents } from "./components.ts";
 
 /** Canonical construction input; omitted (or undefined) parts default to identity. */
 export interface TransformComponentsInit {
+  /** Position component input (§4.3). Defaults to `(0, 0, 0)`. */
   position?: Vector3Like | undefined;
+  /** Rotation component input — quaternion or structural `{x, y, z, w}`. Defaults to identity. */
   rotation?: QuaternionLike | undefined;
+  /** Scale component input (§4.3). Defaults to `(1, 1, 1)`. */
   scale?: Vector3Like | undefined;
 }
 
@@ -19,8 +22,11 @@ export interface TransformComponentsInit {
  * construction interface from §4.3. Scale accepts a uniform number.
  */
 export interface TransformInit {
+  /** Position; omitted means identity. */
   position?: Vector3Like;
+  /** Quaternion (or `{x, y, z, w}`), or Euler radians `[x, y, z]` applied X → Y → Z (§4.3). */
   rotation?: QuaternionLike | readonly [number, number, number];
+  /** Per-axis vector, or a uniform scalar; omitted means `(1, 1, 1)`. */
   scale?: Vector3Like | number;
 }
 
@@ -101,11 +107,22 @@ export class Transform {
    * Composes `parent × local` into a new transform (§4.4). The local
    * transform is interpreted in the parent's coordinate system. Throws when
    * the composed matrix is not representable as TRS components.
+   *
+   * @example
+   * ```ts
+   * const arm = transform().translate(100, 0); // parent
+   * const item = transform().rotateZ(Math.PI / 2); // child in parent frame
+   * const world = arm.compose(item); // Parent × Local (§4.4)
+   * ```
    */
   compose(local: Transform): Transform {
     return Transform.fromMatrix(this.toMatrix().multiply(local.toMatrix()));
   }
 
+  /**
+   * Static form of `Transform#compose`: composes `parent × local` into
+   * a new transform (§4.4).
+   */
   static compose(parent: Transform, local: Transform): Transform {
     return parent.compose(local);
   }
@@ -121,6 +138,12 @@ export class Transform {
   /**
    * Translates by `(x, y, z)` along the object's local axes. Omitted
    * components default to zero. Equivalent to `M ← M × T`.
+   *
+   * @example
+   * ```ts
+   * const t = transform().translate(10, 20); // position (10, 20, 0)
+   * t.components.position.y; // 20 — the source is never mutated (§4.2)
+   * ```
    */
   translate(x: number, y = 0, z = 0): Transform {
     const { position, rotation, scale } = this.components;
@@ -228,6 +251,7 @@ export class Transform {
 /**
  * Creates an immutable transform (§4.1).
  *
+ * @example
  * ```ts
  * transform().translate(100, 50, 0).rotateY(Math.PI / 2).scale(2);
  * transform({ position: [100, 50, 0], rotation: [0, Math.PI / 2, 0], scale: [2, 2, 2] });

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/index.ts"],
+  "tsconfig": "tsconfig.json",
+  "readme": "README.md",
+  "disableSources": false,
+  "sourceLinkTemplate": "https://github.com/johnsonjo4531/keyframe-flow/blob/{gitRevision}/{path}#L{line}",
+  "validation": {
+    "notDocumented": true,
+    "invalidLink": true
+  },
+  "plugin": ["@clean-jsdoc-theme/typedoc"],
+  "outputs": [{ "name": "clean-jsdoc-theme", "path": "site/docs" }],
+  "cleanJsdocTheme": {
+    "siteName": "keyframe-flow",
+    "basePath": "/keyframe-flow/docs",
+    "siteUrl": "https://johnsonjo4531.github.io",
+    "docs": "docs",
+    "docGroups": ["Getting Started", "Guides", "Project"],
+    "menu": [
+      { "id": "home", "title": "Home" },
+      { "title": "Storybook", "link": "/keyframe-flow/storybook/", "icon": "lucide:play-circle" },
+      {
+        "title": "GitHub",
+        "link": "https://github.com/johnsonjo4531/keyframe-flow",
+        "icon": "simple-icons:github"
+      }
+    ],
+    "strict": true
+  }
+}

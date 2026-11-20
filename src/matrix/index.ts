@@ -1,7 +1,12 @@
 import { Matrix4 } from "./matrix4.ts";
 import type { Quaternion } from "../transform/quaternion.ts";
 import type { Vector3Like } from "../transform/vector3.ts";
-import type { DOMMatrixLike, DOMMatrixWritable } from "../types.d.ts";
+import type {
+  DOMMatrixLike,
+  DOMMatrixWritable,
+  DOMPointInput,
+  DOMPointOutput,
+} from "../types.d.ts";
 
 /** Sources accepted by `matrix.from()`. */
 export type MatrixSource = ArrayLike<number> | DOMMatrixLike;
@@ -64,4 +69,4 @@ export const matrix = {
 
 export { Matrix4 };
 export type { TransformComponents } from "../transform/components.ts";
-export type { DOMMatrixLike, DOMMatrixWritable };
+export type { DOMMatrixLike, DOMMatrixWritable, DOMPointInput, DOMPointOutput };
