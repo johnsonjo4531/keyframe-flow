@@ -1,7 +1,7 @@
 # Cross-Platform Transform & Animation Library
 
 **Status:** Final design specification  
-**Version:** 1.0  
+**Version:** 0.0.0  
 **Language:** TypeScript-first
 
 ## 1. Overview
@@ -343,15 +343,15 @@ Keyframe positions must:
 
 Additional behavior:
 
-| Condition | Behavior |
-|---|---|
-| Empty keyframes | Throw an error |
-| One keyframe | Constant animation |
+| Condition                | Behavior                                  |
+| ------------------------ | ----------------------------------------- |
+| Empty keyframes          | Throw an error                            |
+| One keyframe             | Constant animation                        |
 | Missing initial keyframe | Hold the first value before its timestamp |
-| Missing final keyframe | Hold the last value after its timestamp |
-| Out-of-order timestamps | Throw an error |
-| Duplicate timestamps | Throw an error |
-| Invalid timestamps | Throw an error |
+| Missing final keyframe   | Hold the last value after its timestamp   |
+| Out-of-order timestamps  | Throw an error                            |
+| Duplicate timestamps     | Throw an error                            |
+| Invalid timestamps       | Throw an error                            |
 
 Keyframes are never silently reordered.
 
@@ -430,12 +430,12 @@ Raw element-wise interpolation of 4×4 matrices is not the default.
 
 Initial interpolation behavior:
 
-| Property | Interpolation |
-|---|---|
-| Translation | Linear interpolation |
-| Scale | Linear interpolation |
-| 3D rotation | Quaternion SLERP |
-| 2D rotation | Angular interpolation |
+| Property         | Interpolation                   |
+| ---------------- | ------------------------------- |
+| Translation      | Linear interpolation            |
+| Scale            | Linear interpolation            |
+| 3D rotation      | Quaternion SLERP                |
+| 2D rotation      | Angular interpolation           |
 | Other properties | Property-specific interpolation |
 
 ### 9.1 Rotation
@@ -547,9 +547,7 @@ interface Playback {
 The completion promise resolves with:
 
 ```ts
-type PlaybackResult =
-  | { status: "finished" }
-  | { status: "cancelled" };
+type PlaybackResult = { status: "finished" } | { status: "cancelled" };
 ```
 
 The promise resolves rather than rejects for ordinary cancellation.
@@ -569,15 +567,15 @@ Initial states:
 
 Defined behavior:
 
-| Operation | Behavior |
-|---|---|
-| `play()` | Starts or resumes playback |
-| `pause()` | Stops time advancement while retaining state |
-| `reverse()` | Changes playback direction |
-| `seek()` | Changes elapsed animation time |
-| `seekProgress()` | Changes normalized animation progress |
-| `cancel()` | Stops playback and retains the last rendered transform |
-| `dispose()` | Permanently releases playback resources |
+| Operation        | Behavior                                               |
+| ---------------- | ------------------------------------------------------ |
+| `play()`         | Starts or resumes playback                             |
+| `pause()`        | Stops time advancement while retaining state           |
+| `reverse()`      | Changes playback direction                             |
+| `seek()`         | Changes elapsed animation time                         |
+| `seekProgress()` | Changes normalized animation progress                  |
+| `cancel()`       | Stops playback and retains the last rendered transform |
+| `dispose()`      | Permanently releases playback resources                |
 
 Additional rules:
 
@@ -626,11 +624,7 @@ For example, movement and rotation should eventually be composable without manua
 A future composition API could provide:
 
 ```ts
-const animation = Animation.combine([
-  move,
-  rotate,
-  scale,
-]);
+const animation = Animation.combine([move, rotate, scale]);
 ```
 
 Property tracks are the preferred underlying composition model. A convenience combination API can be provided on top of that model.
@@ -831,12 +825,7 @@ src/
 Potential public imports:
 
 ```ts
-import {
-  Animation,
-  transform,
-  matrix,
-  target,
-} from "library";
+import { Animation, transform, matrix, target } from "library";
 ```
 
 Optional subpath exports may be introduced for adapters and matrix utilities:
@@ -940,36 +929,36 @@ The design is successful if:
 
 ## Appendix A: Final API Design Decisions
 
-| Area | Decision |
-|---|---|
-| Transform mutability | Immutable public values |
-| Transform representation | Position, quaternion rotation, scale |
-| Matrix representation | Portable canonical Matrix4 |
-| Coordinate system | Right-handed, column vectors |
-| Matrix storage | Column-major |
-| Keyframe positions | Normalized 0–1 |
-| Animation duration | Milliseconds |
-| Manual sampling | Both milliseconds and normalized progress |
-| Sampling methods | `sample()` and `sampleProgress()` |
-| Playback seeking | `seek()` and `seekProgress()` |
-| Generator execution | Eager, once during definition creation |
-| Async generators | Not supported initially |
-| Keyframe ordering | Strictly increasing |
-| Duplicate timestamps | Invalid |
-| Missing keyframe endpoints | Hold endpoint values |
-| Easing | Animation default and per-segment overrides |
-| Rotation interpolation | Quaternion SLERP |
-| Starting transforms | Explicit in v1 |
-| Property-level definitions | Supported |
-| Concurrent animations | Replacement semantics |
-| Composition | Future property-level tracks |
-| Matrix backend | Portable default |
-| Manual sampling | Included in v1 |
-| Target attachment | Optional |
-| Scheduler | Centralized and injectable |
-| Clock | Injectable |
-| Animation groups | Deferred |
-| Package distribution | Unified package initially |
+| Area                       | Decision                                    |
+| -------------------------- | ------------------------------------------- |
+| Transform mutability       | Immutable public values                     |
+| Transform representation   | Position, quaternion rotation, scale        |
+| Matrix representation      | Portable canonical Matrix4                  |
+| Coordinate system          | Right-handed, column vectors                |
+| Matrix storage             | Column-major                                |
+| Keyframe positions         | Normalized 0–1                              |
+| Animation duration         | Milliseconds                                |
+| Manual sampling            | Both milliseconds and normalized progress   |
+| Sampling methods           | `sample()` and `sampleProgress()`           |
+| Playback seeking           | `seek()` and `seekProgress()`               |
+| Generator execution        | Eager, once during definition creation      |
+| Async generators           | Not supported initially                     |
+| Keyframe ordering          | Strictly increasing                         |
+| Duplicate timestamps       | Invalid                                     |
+| Missing keyframe endpoints | Hold endpoint values                        |
+| Easing                     | Animation default and per-segment overrides |
+| Rotation interpolation     | Quaternion SLERP                            |
+| Starting transforms        | Explicit in v1                              |
+| Property-level definitions | Supported                                   |
+| Concurrent animations      | Replacement semantics                       |
+| Composition                | Future property-level tracks                |
+| Matrix backend             | Portable default                            |
+| Manual sampling            | Included in v1                              |
+| Target attachment          | Optional                                    |
+| Scheduler                  | Centralized and injectable                  |
+| Clock                      | Injectable                                  |
+| Animation groups           | Deferred                                    |
+| Package distribution       | Unified package initially                   |
 
 ## Appendix B: Important Architectural Boundaries
 
