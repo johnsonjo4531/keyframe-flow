@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>keyframe-flow — a transform-first animation engine</title>
+    <meta
+      name="description"
+      content="keyframe-flow: a headless, transform-first 3D animation engine for the web. Pure sampling, explicit playback, structural render targets."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1117;
+        --panel: #171a23;
+        --border: #2a2f3d;
+        --text: #e6e8ee;
+        --muted: #9aa3b5;
+        --accent: #7c8cff;
+        --accent-2: #4dd0a8;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7f8fb;
+          --panel: #ffffff;
+          --border: #e3e6ee;
+          --text: #1b1f2a;
+          --muted: #5b6472;
+          --accent: #4c5fd6;
+          --accent-2: #0d9668;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 4rem 1.25rem 3rem;
+      }
+      h1 {
+        font-size: 2.4rem;
+        margin: 0 0 0.25rem;
+        letter-spacing: -0.02em;
+      }
+      .tagline {
+        color: var(--muted);
+        font-size: 1.15rem;
+        margin: 0 0 2.5rem;
+        max-width: 46rem;
+      }
+      .cards {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .card {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.4rem 1.5rem;
+        transition:
+          border-color 150ms ease,
+          transform 150ms ease;
+      }
+      .card:hover {
+        border-color: var(--accent);
+        transform: translateY(-2px);
+      }
+      .card h2 {
+        margin: 0 0 0.4rem;
+        font-size: 1.25rem;
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 0.55rem;
+      }
+      .badge.green {
+        color: var(--accent-2);
+      }
+      section.principles {
+        margin-top: 3rem;
+      }
+      section.principles h2 {
+        font-size: 1.15rem;
+        letter-spacing: 0.02em;
+      }
+      ul.principles-list {
+        list-style: none;
+        padding: 0;
+        display: grid;
+        gap: 0.6rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      ul.principles-list li {
+        padding-left: 1.4rem;
+        position: relative;
+      }
+      ul.principles-list li::before {
+        content: "◆";
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-size: 0.75rem;
+        top: 0.3rem;
+      }
+      code.install {
+        display: inline-block;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0.45rem 0.8rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9rem;
+        margin-top: 2rem;
+      }
+      footer {
+        margin-top: 3rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      a.plain {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>keyframe-flow</h1>
+      <p class="tagline">
+        A headless, transform-first animation engine for the web: immutable transforms and matrices
+        at its core, pure timeline sampling, an explicit playback state machine, and structural
+        render targets for HTML, SVG, Canvas 2D, WebGL, and WebGPU.
+      </p>
+
+      <div class="cards">
+        <a class="card" href="/keyframe-flow/docs/">
+          <span class="badge">Reference &amp; guides</span>
+          <h2>Documentation</h2>
+          <p>
+            Full API reference plus user guides — getting started, core concepts and coordinate
+            conventions, animation authoring styles, easing &amp; interpolation, playback lifecycle,
+            and render adapters.
+          </p>
+        </a>
+        <a class="card" href="/keyframe-flow/storybook/">
+          <span class="badge green">Live examples</span>
+          <h2>Storybook</h2>
+          <p>
+            Interactive stories for every capability: from/to and property-level definitions,
+            generator keyframes, all 26 easings plus custom curves, SLERP vs angular rotation,
+            manual sampling loops, full transport controls, and every render adapter — including a
+            structural custom target.
+          </p>
+        </a>
+      </div>
+
+      <section class="principles">
+        <h2>Design principles</h2>
+        <ul class="principles-list">
+          <li>Runs anywhere JavaScript runs — the core never touches browser APIs.</li>
+          <li>
+            Immutable values: transforms, matrices, and animations are never mutated in place.
+          </li>
+          <li>Right-handed coordinates, column vectors, column-major matrices, radians only.</li>
+          <li>Sampling is a pure function of progress — drive your own render loop if you want.</li>
+          <li>Playback is explicit: one owner per render target, supersede semantics, no magic.</li>
+          <li>
+            Render targets are structural — any object with <code>setTransform(matrix)</code> works.
+          </li>
+        </ul>
+      </section>
+
+      <code class="install">npm install keyframe-flow</code>
+
+      <footer>
+        Built from the
+        <a class="plain" href="https://github.com/johnsonjo4531/keyframe-flow"
+          >keyframe-flow repository</a
+        >. API reference and Storybook deploy side by side on GitHub Pages.
+      </footer>
+    </main>
+  </body>
+</html>
