@@ -1,0 +1,23 @@
+[      75ms] [ERROR] TypeError: Illegal invocation
+    at Object.request (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:11268)
+    at v._requestFrame (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:11930)
+    at v.add (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:11710)
+    at te._register (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:16746)
+    at te.play (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:14494)
+    at new te (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:13381)
+    at e.attach (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:27089)
+    at http://localhost:8123/keyframe-flow/storybook/assets/playback-story-CCxnAfcx.js:1:463
+    at El (http://localhost:8123/keyframe-flow/storybook/assets/react-18-CwBEnTi1.js:8:94914)
+    at Uu (http://localhost:8123/keyframe-flow/storybook/assets/react-18-CwBEnTi1.js:8:118075) @ http://localhost:8123/keyframe-flow/storybook/assets/react-18-CwBEnTi1.js:8
+[      76ms] [ERROR] Error rendering story 'targets-html-adapter--matrix-3-d': @ http://localhost:8123/keyframe-flow/storybook/assets/iframe-B57g8o2C.js:579
+[      76ms] [ERROR] TypeError: Illegal invocation
+    at Object.request (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:11268)
+    at v._requestFrame (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:11930)
+    at v.add (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:11710)
+    at te._register (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:16746)
+    at te.play (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:14494)
+    at new te (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:13381)
+    at e.attach (http://localhost:8123/keyframe-flow/storybook/assets/src-C5aYqitn.js:1:27089)
+    at http://localhost:8123/keyframe-flow/storybook/assets/playback-story-CCxnAfcx.js:1:463
+    at El (http://localhost:8123/keyframe-flow/storybook/assets/react-18-CwBEnTi1.js:8:94914)
+    at Uu (http://localhost:8123/keyframe-flow/storybook/assets/react-18-CwBEnTi1.js:8:118075) @ http://localhost:8123/keyframe-flow/storybook/assets/iframe-B57g8o2C.js:579

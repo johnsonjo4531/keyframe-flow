@@ -6,6 +6,28 @@ follows a keep-a-changelog style and the version numbers follow
 
 ## 0.0.0
 
+### Milestone 7 — Storybook Runtime Fixes (T46)
+
+- Fixed a browser-only defect where every animated Storybook story failed with
+  `TypeError: Illegal invocation`: `resolveFrameHost` captured
+  `globalThis.requestAnimationFrame`/`cancelAnimationFrame` as unbound
+  references and later invoked them as methods of the plain `{ request, cancel }`
+  frame-host object, so Chromium rejected the wrong `this`. The frame
+  functions are now wrapped so rAF/cAF always run with the global object as
+  receiver; resolution still happens at call time, keeping §2 principle 1
+  intact.
+- Added `src/timing/scheduler.browser.test.ts` — three Chromium regression
+  tests covering the default browser frame path: requesting a real
+  `requestAnimationFrame` tick, cancelling a requested frame, and driving
+  full playback through the lazily created shared engine with no injected
+  clock or scheduler. Previously `createFrameScheduler` was only tested via
+  Node's timer fallback, which is why the defect survived an otherwise green
+  suite (browser tests now 20 total).
+- Verified in a real browser via Playwright: rebuilt Storybook serves all 18
+  stories with zero console errors (previously every playback story rendered
+  "Illegal invocation — The component failed"); unit (245), browser (20),
+  lint, format, and type checks all green.
+
 ### Milestone 6 — User Documentation (T38–T45)
 
 - Authored seven user-facing guides in `docs/` with frontmatter

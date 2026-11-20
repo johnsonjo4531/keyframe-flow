@@ -67,6 +67,13 @@ Depends on Milestones 3–5: the storybook examples demonstrate playback and ren
 44. [x] Wire up the Makefile documentation pipeline: `build-docs` (TypeDoc → `site/docs`), `build-storybook` (`storybook build --config-dir examples/.storybook -o site/storybook --base-path /keyframe-flow/storybook/`), and `github_pages_deploy` (build both, stage the landing page + `.nojekyll`, publish `site/` to the `gh-pages` branch with `npx --yes gh-pages -d site --dotfiles`). The targets are scaffolded in the Makefile now — validate them end-to-end once docs and stories exist.
 45. [x] Documentation QA: every `{@link}` resolves (unresolved namepaths silently render as inline code — grep for those), guide ↔ API reference ↔ storybook cross-links correct, no broken images/assets in a local preview (`npx serve site`), mobile + dark-mode sanity pass; document the docs workflow itself in `docs/contributing-docs.md`.
 
+## Milestone 7: Storybook Runtime Fixes
+
+Discovered via Playwright inspection of the built Storybook (`site/storybook`): every story that drives playback renders "Illegal invocation — The component failed" with a `TypeError` thrown from the scheduler's frame-request path in the browser bundle.
+
+46. [x] Fix the Storybook runtime failure where all animated stories throw `TypeError: Illegal invocation`: `resolveFrameHost` in `src/timing/scheduler.ts` captures unbound `globalThis.requestAnimationFrame`/`cancelAnimationFrame` references and later invokes them as methods of a plain `{ request, cancel }` host object, so the browser rejects the wrong `this` (§16). Wrap/bind the frame functions so rAF is always called with the environment as receiver; add a Chromium browser-suite regression test that drives real playback through the default `createFrameScheduler()` path (the suite currently only covers the Node timer fallback in `timing.test.ts`, which is why 245 unit + 17 browser tests stayed green); rebuild Storybook and verify all 18 stories render with zero console errors.
+47. [ ] Show the source of every example by enabling Storybook's Code panel: set `parameters.docs.codePanel = true` in `examples/.storybook/preview.ts` so it applies to all stories (the recommended project-wide location); rebuild `site/storybook` and verify the Code tab renders alongside the canvas for each story.
+
 ## Phases
 
 ## Phase 1 — Math core and Matrix4
@@ -116,3 +123,11 @@ Depends on Milestones 3–5: the storybook examples demonstrate playback and ren
 ## Phase 12 — GitHub Pages integration and deploy QA
 
 - [x] Complete: T43, T44, T45
+
+## Phase 13 — Storybook runtime fixes
+
+- [x] Complete: T46
+
+## Phase 14 — Storybook code panel
+
+- [ ] Complete: T47

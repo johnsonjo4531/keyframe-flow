@@ -40,10 +40,19 @@ function resolveFrameHost(): FrameHost {
   };
 
   if (typeof host.requestAnimationFrame === "function") {
-    const request = host.requestAnimationFrame;
-    const cancel =
-      typeof host.cancelAnimationFrame === "function" ? host.cancelAnimationFrame : () => {};
-    return { request, cancel };
+    // Wrap, never detach: rAF/cAF are environment methods that Chromium rejects
+    // with "Illegal invocation" when called with any `this` other than the
+    // global object (e.g. as a method of the plain FrameHost below).
+    const raf = host.requestAnimationFrame;
+    const caf = typeof host.cancelAnimationFrame === "function" ? host.cancelAnimationFrame : null;
+    return {
+      request(callback) {
+        return raf.call(globalThis, callback);
+      },
+      cancel(handle) {
+        if (caf !== null) caf.call(globalThis, handle);
+      },
+    };
   }
 
   // Timer fallback for non-browser environments (§16: Node.js, tests).
