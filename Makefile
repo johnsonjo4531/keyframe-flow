@@ -67,7 +67,7 @@ github_pages_deploy:
 	touch $(SITE_DIR)/.nojekyll
 	# --dotfiles so site/.nojekyll is published (GitHub Pages would otherwise
 	# process the built site through Jekyll and drop _assets/ + underscore paths).
-	npx --yes gh-pages --dotfiles -d $(SITE_DIR) -b gh-pages -t
+	pnpx --yes gh-pages --dotfiles -d $(SITE_DIR) -b gh-pages -t
 
 commit_from_ai_message:
 	git commit -F CURRENT_COMMIT_MESSAGE.md
