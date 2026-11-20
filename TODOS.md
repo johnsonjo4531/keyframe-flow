@@ -4,15 +4,15 @@ Tasks derived from `design-docs/vision.md` — Section 20 "Initial Implementatio
 
 ## Milestone 1: Transform and Matrix Foundations
 
-1. [ ] Set up project tooling so tests run: `vp` dev/build config, Vitest unit config, and a browser test config (`vitest.browser.config.ts`) matching the Makefile targets. Core must run without browser APIs (§2 principle 1).
-2. [ ] Implement `Vector3` primitives (add, scale, dot, cross, length, normalize) with immutable public values.
-3. [ ] Implement `Quaternion` primitives (from Euler radians, multiply, normalize, conjugate, slerp-ready building blocks). Rotations are stored internally as quaternions (§4.3).
-4. [ ] Implement portable canonical `Matrix4`: column-major storage, right-handed coordinates, column vectors, radians (§4.4); creation from values/arrays and conversions to/from `DOMMatrix` and `Float32Array` preserving mathematical meaning, not raw element copying (§15, §15.2).
-5. [ ] Implement matrix operations: multiplication (`a.multiply(b)` = A × B), inversion, composition of TRS components into a matrix, and decomposition back to TRS where mathematically supported — unsupported matrices (shear, reflection, perspective, singular) must throw explicitly (§9.2, §15.1).
-6. [ ] Implement immutable `Transform` with canonical `{ position, rotation: Quaternion, scale }` representation; Euler angles accepted only as a radians construction interface (§4.2, §4.3).
-7. [ ] Implement transform construction: fluent `transform().translate(x,y,z).rotateY(rad).scale(s)` and declarative `transform({ position, rotation, scale })`; every operation returns a new transform without mutating the source (§4.1, §4.2).
-8. [ ] Implement transform composition: fluent operations applied in call order as local-space operations; parent-to-child composition via `Parent × Local`; world-space operations act in the parent coordinate system (§4.4).
-9. [ ] Write coordinate-convention tests: right-handedness, column-major storage layout, multiplication order, radians, translation placement, and DOMMatrix/Float32Array round-trips (§4.4, §15.2).
+1. [x] Set up project tooling so tests run: `vp` dev/build config, Vitest unit config, and a browser test config (`vitest.browser.config.ts`) matching the Makefile targets. Core must run without browser APIs (§2 principle 1).
+2. [x] Implement `Vector3` primitives (add, scale, dot, cross, length, normalize) with immutable public values.
+3. [x] Implement `Quaternion` primitives (from Euler radians, multiply, normalize, conjugate, slerp-ready building blocks). Rotations are stored internally as quaternions (§4.3).
+4. [x] Implement portable canonical `Matrix4`: column-major storage, right-handed coordinates, column vectors, radians (§4.4); creation from values/arrays and conversions to/from `DOMMatrix` and `Float32Array` preserving mathematical meaning, not raw element copying (§15, §15.2).
+5. [x] Implement matrix operations: multiplication (`a.multiply(b)` = A × B), inversion, composition of TRS components into a matrix, and decomposition back to TRS where mathematically supported — unsupported matrices (shear, reflection, perspective, singular) must throw explicitly (§9.2, §15.1).
+6. [x] Implement immutable `Transform` with canonical `{ position, rotation: Quaternion, scale }` representation; Euler angles accepted only as a radians construction interface (§4.2, §4.3).
+7. [x] Implement transform construction: fluent `transform().translate(x,y,z).rotateY(rad).scale(s)` and declarative `transform({ position, rotation, scale })`; every operation returns a new transform without mutating the source (§4.1, §4.2).
+8. [x] Implement transform composition: fluent operations applied in call order as local-space operations; parent-to-child composition via `Parent × Local`; world-space operations act in the parent coordinate system (§4.4).
+9. [x] Write coordinate-convention tests: right-handedness, column-major storage layout, multiplication order, radians, translation placement, and DOMMatrix/Float32Array round-trips (§4.4, §15.2).
 
 ## Milestone 2: Animation Definitions
 
@@ -57,28 +57,37 @@ Tasks derived from `design-docs/vision.md` — Section 20 "Initial Implementatio
 ## Phases
 
 ## Phase 1 — Math core and Matrix4
-- [ ] Complete: T1, T2, T3, T4, T5
+
+- [x] Complete: T1, T2, T3, T4, T5
 
 ## Phase 2 — Transform core
-- [ ] Complete: T6, T7, T8, T9
+
+- [x] Complete: T6, T7, T8, T9
 
 ## Phase 3 — Animation definitions and keyframes
+
 - [ ] Complete: T10, T11, T12, T13, T14
 
 ## Phase 4 — Easing, interpolation, and sampling
+
 - [ ] Complete: T15, T16, T17
 
 ## Phase 5 — Scheduling and playback instances
+
 - [ ] Complete: T18, T19, T20
 
 ## Phase 6 — Playback controls, repetition, and lifecycle
+
 - [ ] Complete: T21, T22, T23, T24, T25, T26
 
 ## Phase 7 — Render adapters
+
 - [ ] Complete: T27, T28, T29, T30, T31
 
 ## Phase 8 — GPU adapters and composition
+
 - [ ] Complete: T32, T33, T34
 
 ## Phase 9 — Rotation tracks, groups, and extensions
+
 - [ ] Complete: T35, T36, T37
