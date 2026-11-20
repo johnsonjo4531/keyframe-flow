@@ -9,7 +9,7 @@ description: "Creates the default frame scheduler (§16): requestAnimationFrame 
 
 <Signature code="createFrameScheduler(): Scheduler" />
 
-<SourceLink href="/keyframe-flow/docs/source/timing/scheduler-ts/#L66" label="scheduler.ts:66" />
+<SourceLink href="/keyframe-flow/docs/source/timing/scheduler-ts/#L75" label="scheduler.ts:75" />
 
 Creates the default frame scheduler (§16): `requestAnimationFrame` in browsers, timer-based scheduling elsewhere. Resolution happens at call time — not import time — so the core never touches browser APIs merely by being loaded (§2 principle 1).
 
