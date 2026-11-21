@@ -1,4 +1,4 @@
-import{n as e}from"./rolldown-runtime-sJBDdmOt.js";import{n as t,p as n}from"./iframe-DXSg0uKF.js";import{i as r,r as i,t as a}from"./src-DfDWSzNz.js";import{i as o,n as s,r as c,t as l}from"./playback-story-w1_FZ1Kv.js";function u({duration:e}){let[t,n]=(0,d.useState)(``),a=o(()=>r.from({from:{position:[-100,-30,0],scale:.6},to:{position:[100,30,0],rotation:[0,Math.PI/4,0]},duration:e,easing:`ease-in-out`}),()=>i.webgpu({onTransform:e=>{n(Array.from(e.slice(12,15),e=>e.toFixed(1)).join(`, `))}}),[e]);return(0,f.jsxs)(`div`,{style:{display:`grid`,justifyItems:`center`},children:[(0,f.jsx)(`div`,{style:{width:320,height:160,display:`grid`,placeItems:`center`,border:`1px dashed #6b728055`,borderRadius:12},children:(0,f.jsxs)(`span`,{style:{fontSize:13,color:`#9ca3af`},children:[`uniform buffer translation: [`,t,`]`]})}),(0,f.jsx)(s,{handle:a}),(0,f.jsx)(l,{handle:a})]})}var d,f,p,m,h;function g(){return(g=e((()=>{a(),d=n(),c(),f=t(),p={title:`Targets/WebGPU Adapter`,component:u,args:{duration:1600},argTypes:{duration:{control:{type:`range`,min:200,max:5e3,step:100}}}},m={},typeof p==`object`&&p&&(p.parameters=Object.assign({},p.parameters,{docs:Object.assign({},p.parameters&&p.parameters.docs,{source:Object.assign({},p.parameters&&p.parameters.docs&&p.parameters.docs.source,{code:`import { Animation, target } from "keyframe-flow";
+import{n as e}from"./rolldown-runtime-sJBDdmOt.js";import{n as t,p as n}from"./iframe-BjydkunC.js";import{i as r,r as i,t as a}from"./src-CIE5dN4r.js";import{i as o,n as s,r as c,t as l}from"./playback-story-5Ss6VQ81.js";function u({duration:e}){let[t,n]=(0,d.useState)(``),a=o(()=>r.from({from:{position:[-100,-30,0],scale:.6},to:{position:[100,30,0],rotation:[0,Math.PI/4,0]},duration:e,easing:`ease-in-out`}),()=>i.webgpu({onTransform:e=>{n(Array.from(e.slice(12,15),e=>e.toFixed(1)).join(`, `))}}),[e]);return(0,f.jsxs)(`div`,{ref:a.hostRef,style:{display:`grid`,justifyItems:`center`},children:[(0,f.jsx)(`div`,{style:{width:320,height:160,display:`grid`,placeItems:`center`,border:`1px dashed #6b728055`,borderRadius:12},children:(0,f.jsxs)(`span`,{style:{fontSize:13,color:`#9ca3af`},children:[`uniform buffer translation: [`,t,`]`]})}),(0,f.jsx)(s,{handle:a}),(0,f.jsx)(l,{handle:a})]})}var d,f,p,m,h;function g(){return(g=e((()=>{a(),d=n(),c(),f=t(),p={title:`Targets/WebGPU Adapter`,component:u,args:{duration:1600},argTypes:{duration:{control:{type:`range`,min:200,max:5e3,step:100}}}},m={},typeof p==`object`&&p&&(p.parameters=Object.assign({},p.parameters,{docs:Object.assign({},p.parameters&&p.parameters.docs,{source:Object.assign({},p.parameters&&p.parameters.docs&&p.parameters.docs.source,{code:`import { Animation, target } from "keyframe-flow";
 import type * as React from "react";
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
@@ -32,7 +32,9 @@ function WebGPUSubmitStory({ duration }: { duration: number }): React.ReactEleme
   );
 
   return (
-    <div style={{ display: "grid", justifyItems: "center" }}>
+    // hostRef is required by useKeyframePlayback (it builds the playback from
+    // a mounted host) but layout-only here — the WebGPU target ignores it.
+    <div ref={handle.hostRef} style={{ display: "grid", justifyItems: "center" }}>
       <div
         style={{
           width: 320,
@@ -101,7 +103,9 @@ function WebGPUSubmitStory({ duration }: { duration: number }): React.ReactEleme
   );
 
   return (
-    <div style={{ display: "grid", justifyItems: "center" }}>
+    // hostRef is required by useKeyframePlayback (it builds the playback from
+    // a mounted host) but layout-only here — the WebGPU target ignores it.
+    <div ref={handle.hostRef} style={{ display: "grid", justifyItems: "center" }}>
       <div
         style={{
           width: 320,
