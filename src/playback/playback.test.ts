@@ -116,6 +116,41 @@ describe("playback scheduling (§16)", () => {
     expect(h.engine.activeCount).toBe(0);
   });
 
+  it("ignores non-forward frame timestamps so boundary restarts don't finish instantly (§16)", () => {
+    // Browser race: a click dispatched inside an already-started frame calls
+    // play() (anchoring to clock.now()) and the pending frame callback then
+    // delivers that frame's older timestamp. A run always starts exactly on a
+    // timeline boundary, so a negative delta would cross the opposite boundary
+    // and complete the run in one step.
+    const h = createHarness();
+    h.clock.advance(5000); // arbitrary origin drift between clock and frames
+    const playback = moveAnimation(1000).attach(undefined, { engine: h.engine });
+
+    playback.play(); // anchors at clock.now() = 5000
+    h.scheduler.tick(4986); // stale frame timestamp from before the anchor
+
+    expect(playback.state).toBe("running");
+    expect(playback.currentTime).toBe(0);
+    expect(h.engine.activeCount).toBe(1);
+
+    h.clock.advance(30);
+    h.scheduler.tick(h.clock.now()); // 5030 → normal 30 ms advance from anchor
+    expect(playback.currentTime).toBeCloseTo(30, 9);
+  });
+
+  it("a stale timestamp mid-run never steps time backwards (§16)", () => {
+    const h = createHarness();
+    const playback = moveAnimation(1000).attach(undefined, { engine: h.engine });
+
+    playback.play();
+    h.tick(400);
+    expect(playback.currentTime).toBeCloseTo(400, 9);
+
+    h.scheduler.tick(h.clock.now() - 14); // out-of-order frame timestamp
+    expect(playback.state).toBe("running");
+    expect(playback.currentTime).toBeCloseTo(400, 9); // time retained, not reversed
+  });
+
   it("ManualScheduler fires one-shot requests in order and honors cancel", () => {
     const scheduler = new ManualScheduler();
     const seen: number[] = [];

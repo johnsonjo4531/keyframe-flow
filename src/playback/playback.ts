@@ -388,9 +388,17 @@ export class Playback {
    */
   onEngineUpdate(timeMs: number): void {
     if (this._state !== "running") return;
+    // Ignore non-forward timestamps (§16): a frame callback can deliver the
+    // timestamp of a frame that began before the last anchor — e.g. an input
+    // event dispatched inside an already-started frame calls `play()`, which
+    // anchors to `clock.now()` ahead of that frame's timestamp. A run always
+    // starts exactly on a timeline boundary (`t = 0` forward, `t = duration`
+    // reversed), so even a few ms of negative delta would cross the opposite
+    // boundary and finish the run in a single step. The anchor is left ahead
+    // so the ignored interval is never double-counted later.
     const delta = timeMs - this._lastTimestamp;
+    if (delta <= 0) return;
     this._lastTimestamp = timeMs;
-    if (delta === 0) return;
     this._advance(delta * this._rate);
     if (this._state === "running") {
       this._render();

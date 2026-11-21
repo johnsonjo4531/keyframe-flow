@@ -6,3 +6,5 @@ site/
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+
+.playwright-mcp

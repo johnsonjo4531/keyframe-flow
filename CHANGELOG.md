@@ -6,6 +6,44 @@ follows a keep-a-changelog style and the version numbers follow
 
 ## 0.0.0
 
+### Milestone 8 — Storybook Reset Control & GPU Example Fixes (T48–T49)
+
+- Added a **reset** control to the shared Storybook transport so every example
+  can rewind and replay from the beginning facing forward. `useKeyframePlayback`
+  now exposes `reset()`, which seeks playback to progress 0 and — because §12
+  restarts a run in its *current* direction — flips the instance back to
+  forward if it was reversed, so a subsequent `play()` always runs 0 → 1 rather
+  than backwards. The button is wired into the shared `Transport`, so all 14
+  stories using it gain reset for free.
+- Fixed the **WebGL and WebGPU target stories** rendering nothing: both call
+  `useKeyframePlayback` but never attached its `hostRef` to any element, so the
+  hook's effect early-returned on a null host — no playback instance was ever
+  created, every transport button silently did nothing, and the uniform
+  upload/write readouts stayed empty. Both now attach `hostRef` to their layout
+  wrapper (the custom-target pattern: host for layout only, GPU adapter ignores
+  it). Verified via Playwright that both autoplay and drive real GPU paths — a
+  moving WebGL quad through `uniformMatrix4fv`, live WebGPU translation values —
+  with zero console errors.
+- Fixed a latent engine defect the GPU investigation surfaced: button-restarted
+  runs could finish instantly. A frame callback can deliver a timestamp older
+  than the anchor captured in `play()` (input dispatched inside an already
+  started frame), and because a run always begins exactly on a timeline boundary
+  (`t = 0` forward, `t = duration` reversed), even a few milliseconds of negative
+  delta crossed the opposite boundary and completed the run in one step.
+  `Playback.onEngineUpdate` now ignores non-forward timestamps (§16) without
+  double-counting the skipped interval. Added two unit regression tests
+  (boundary restart with a stale timestamp; mid-run out-of-order frame), bringing
+  the Node suite to 247.
+- Made the story readout re-sync whenever a transport control is pressed: the
+  frame-mirror loop stops as soon as playback is not running, so discrete
+  actions (play after finish, reset, seek) would otherwise show stale state. All
+  controls now share one rAF handle and kick it on every action.
+- Verified end to end with Playwright against the rebuilt static Storybook: all
+  18 stories render, every transport-bearing story shows the reset button, and a
+  full reverse → reset → play round trip advances `t` from 0 to duration forward
+  on both GPU targets; unit (247), browser (20), examples `tsc`, lint, format,
+  and type checks all green.
+
 ### Milestone 7 — Storybook Runtime Fixes (T46)
 
 - Fixed a browser-only defect where every animated Storybook story failed with

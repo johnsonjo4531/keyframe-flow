@@ -74,6 +74,13 @@ Discovered via Playwright inspection of the built Storybook (`site/storybook`): 
 46. [x] Fix the Storybook runtime failure where all animated stories throw `TypeError: Illegal invocation`: `resolveFrameHost` in `src/timing/scheduler.ts` captures unbound `globalThis.requestAnimationFrame`/`cancelAnimationFrame` references and later invokes them as methods of a plain `{ request, cancel }` host object, so the browser rejects the wrong `this` (§16). Wrap/bind the frame functions so rAF is always called with the environment as receiver; add a Chromium browser-suite regression test that drives real playback through the default `createFrameScheduler()` path (the suite currently only covers the Node timer fallback in `timing.test.ts`, which is why 245 unit + 17 browser tests stayed green); rebuild Storybook and verify all 18 stories render with zero console errors.
 47. [x] Show the source of every example by enabling Storybook's Code panel: set `parameters.docs.codePanel = true` in `examples/.storybook/preview.ts` so it applies to all stories (the recommended project-wide location); rebuild `site/storybook` and verify the Code tab renders alongside the canvas for each story.
 
+## Milestone 8: Storybook Reset Control & GPU Example Fixes
+
+Discovered via Playwright inspection of the Storybook dev server: the WebGL and WebGPU target stories never create a playback at all — their readouts sit frozen at `state: idle / t = 0 ms` and every transport button is inert.
+
+48. [x] Add a reset control to the shared story transport in `examples/stories/playback-story.tsx`: a `reset()` on `useKeyframePlayback` that seeks playback back to progress 0 and restores forward direction — if the instance is currently flipped (via `reverse()`, §12–§13), flip it back so a subsequent `play()` runs 0 → 1 rather than in reverse (§12: restarts use the current direction). Expose it as a `reset` button on `Transport` so all stories using the shared transport get it; also re-sync the frame-mirrored readout when transport controls are pressed, since the mirror loop stops whenever playback is not running and would otherwise show stale state after reset/seek. Playwright-verify: finish or reverse a run, press reset then play, and watch `t` advance from 0 to duration forward.
+49. [x] Fix the WebGL and WebGPU Storybook examples (`examples/stories/targets/webgl-target.stories.tsx`, `webgpu-target.stories.tsx`): both call `useKeyframePlayback` but never attach `handle.hostRef` to any element, so the hook's effect early-returns on a null host — no playback instance is ever created, transport buttons silently do nothing, and the uniform upload/write readouts stay empty. Attach `hostRef` to each story's layout wrapper (the same pattern as the custom-target story: host for layout only, adapter ignores it), then verify with Playwright that both stories autoplay, animate on their GPU paths (moving quad / live translation values), and report zero console errors. Playwright investigation also surfaced an engine defect this exposed: button-restarted runs could complete instantly because a frame callback can deliver a timestamp older than the anchor taken in `play()` (input dispatched inside an already-started frame), and a run always begins exactly on a timeline boundary, so even a few ms of negative delta crosses it in one step — `Playback.onEngineUpdate` must ignore non-forward timestamps (§16), with unit-test regression coverage.
+
 ## Phases
 
 ## Phase 1 — Math core and Matrix4
@@ -131,3 +138,7 @@ Discovered via Playwright inspection of the built Storybook (`site/storybook`): 
 ## Phase 14 — Storybook code panel
 
 - [x] Complete: T47
+
+## Phase 15 — Storybook reset control and GPU example fixes
+
+- [x] Complete: T48, T49

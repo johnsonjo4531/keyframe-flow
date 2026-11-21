@@ -21,6 +21,8 @@ export interface PlaybackStoryHandle {
   play(): void;
   pause(): void;
   reverse(): void;
+  /** Rewind to progress 0 facing forward, so the next `play()` runs 0 → 1. */
+  reset(): void;
   cancel(): void;
   seekProgress(p: number): void;
 }
@@ -52,6 +54,27 @@ export function useKeyframePlayback(
   const optionsRef = useRef(makeOptions);
   optionsRef.current = makeOptions;
 
+  // Mirror live playback state on frames while a run is live (Playback
+  // exposes no event bus, §12), and re-kick whenever a control is pressed:
+  // the loop stops as soon as playback is not running, so without a kick a
+  // discrete action (play after finish, reset, seek) would leave the readout
+  // stale. One rAF handle for the whole hook lifetime.
+  const rafRef = useRef(0);
+  const kickSync = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    const sync = (): void => {
+      const playback = playbackRef.current;
+      if (playback === undefined) return;
+      setState(playback.state);
+      setCurrentTime(playback.currentTime);
+      setIterationCount(playback.iterationCount);
+      if (playback.state === "running") {
+        rafRef.current = requestAnimationFrame(sync);
+      }
+    };
+    sync();
+  }, []);
+
   useEffect(() => {
     const host = hostRef.current;
     if (host === null) return;
@@ -67,31 +90,49 @@ export function useKeyframePlayback(
       setState(playback.state);
     });
 
-    // Playback exposes no event bus (§12), so mirror state on frames while a
-    // run is live — cheap and accurate for demos.
-    let raf = 0;
-    const sync = (): void => {
-      setState(playback.state);
-      setCurrentTime(playback.currentTime);
-      setIterationCount(playback.iterationCount);
-      if (playback.state === "running") {
-        raf = requestAnimationFrame(sync);
-      }
-    };
-    sync();
+    kickSync();
 
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(rafRef.current);
       playback.dispose();
       playbackRef.current = undefined;
     };
-  }, [...deps]);
+  }, [...deps, kickSync]);
 
-  const play = useCallback(() => playbackRef.current?.play(), []);
-  const pause = useCallback(() => playbackRef.current?.pause(), []);
-  const reverse = useCallback(() => playbackRef.current?.reverse(), []);
-  const cancel = useCallback(() => playbackRef.current?.cancel(), []);
-  const seekProgress = useCallback((p: number) => playbackRef.current?.seekProgress(p), []);
+  const play = useCallback(() => {
+    playbackRef.current?.play();
+    kickSync();
+  }, [kickSync]);
+  const pause = useCallback(() => {
+    playbackRef.current?.pause();
+    kickSync();
+  }, [kickSync]);
+  const reverse = useCallback(() => {
+    playbackRef.current?.reverse();
+    kickSync();
+  }, [kickSync]);
+  // Rewind to the start facing forward: §12 restarts a run "in current
+  // direction", so any reverse() flip is undone here and the next play()
+  // always runs 0 → 1. Seeking also re-evaluates and renders frame zero.
+  const reset = useCallback(() => {
+    const playback = playbackRef.current;
+    if (playback === undefined) return;
+    if (playback.reversed) playback.reverse();
+    setResult(undefined);
+    playback.seek(0);
+    kickSync();
+  }, [kickSync]);
+  const cancel = useCallback(() => {
+    playbackRef.current?.cancel();
+    kickSync();
+  }, [kickSync]);
+  const seekProgress = useCallback(
+    (p: number) => {
+      playbackRef.current?.seekProgress(p);
+      kickSync();
+    },
+    [kickSync],
+  );
 
   return {
     hostRef,
@@ -103,6 +144,7 @@ export function useKeyframePlayback(
     play,
     pause,
     reverse,
+    reset,
     cancel,
     seekProgress,
   };
@@ -141,6 +183,9 @@ export function Transport({ handle }: { handle: PlaybackStoryHandle }): React.Re
       </button>
       <button type="button" style={button} onClick={() => handle.pause()}>
         pause
+      </button>
+      <button type="button" style={button} onClick={() => handle.reset()}>
+        reset
       </button>
       <button type="button" style={button} onClick={() => handle.reverse()}>
         reverse

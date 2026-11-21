@@ -22,12 +22,5 @@
     "storybook": "^10.6.7",
     "typedoc": "^0.28.20",
     "vite-plus": "^1.7.0"
-  },
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "12.21.0",
-      "onFail": "download"
-    }
   }
 }

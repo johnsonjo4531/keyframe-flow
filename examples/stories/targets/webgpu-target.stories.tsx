@@ -32,7 +32,9 @@ function WebGPUSubmitStory({ duration }: { duration: number }): React.ReactEleme
   );
 
   return (
-    <div style={{ display: "grid", justifyItems: "center" }}>
+    // hostRef is required by useKeyframePlayback (it builds the playback from
+    // a mounted host) but layout-only here — the WebGPU target ignores it.
+    <div ref={handle.hostRef} style={{ display: "grid", justifyItems: "center" }}>
       <div
         style={{
           width: 320,

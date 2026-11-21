@@ -102,7 +102,9 @@ function WebGLTargetStory({ duration }: { duration: number }): React.ReactElemen
   }
 
   return (
-    <div style={{ display: "grid", justifyItems: "center" }}>
+    // hostRef is required by useKeyframePlayback (it builds the playback from
+    // a mounted host) but layout-only here — the WebGL target ignores it.
+    <div ref={handle.hostRef} style={{ display: "grid", justifyItems: "center" }}>
       <canvas ref={canvasRef} width={420} height={220} style={{ maxWidth: "100%" }} />
       <code style={{ fontSize: 11, color: "#9ca3af" }}>uniform upload — {uploaded}</code>
       <Transport handle={handle} />

@@ -1,23 +1,36 @@
-docs(storybook): show real example source in the Code panel (T47)
+fix(storybook): rewind-and-replay forward; repair WebGL/WebGPU stories (T48–T49)
 
-Every published example now renders its authored TSX next to the live
-canvas, so readers see actual keyframe-flow usage — imports, animation
-definitions, adapter wiring — not just a running demo.
+Two Storybook fixes, both found and verified through the Playwright MCP server.
 
-- Enable the Code panel project-wide via `parameters.docs.codePanel: true`
-  in examples/.storybook/preview.tsx (the recommended global location).
-- Add @storybook/addon-docs (^10.6.7) as a devDependency and register it in
-  examples/.storybook/main.ts — the Code panel is contributed by the docs
-  addon's manager entry, so the parameter alone does nothing without it.
-- Inject real story source with a small `enforce: "pre"` Vite plugin
-  (`injectStorySourcePlugin`): Storybook's auto-generated
-  `<Component {...args}/>` snippet renders as `<l …/>` in minified builds,
-  and neither `source.type: "static"` nor `originalSource` outrank it. The
-  plugin appends each `.stories.tsx` module's verbatim source into
-  `meta.parameters.docs.source.code`, the panel's highest-precedence key,
-  matching the files' uniform `const meta = …; export default meta;` shape.
-- Documented the mechanism in docs/contributing-docs.md (Storybook section).
-- Verified with Playwright against the rebuilt static site: all 18 stories
-  open a Code tab containing authored TSX (`import { Animation, target }
-  from "keyframe-flow"` etc.), zero console errors; examples tsc, unit suite
-  (245), and vp check all green.
+Add a reset control to every transport-bearing example:
+- useKeyframePlayback now exposes reset(): seek to progress 0 AND restore
+  forward direction. §12 restarts a run in its current direction, so a reversed
+  instance would replay backwards — reset flips it back first, guaranteeing the
+  next play() runs 0 → 1.
+- Wired into the shared Transport component, so all 14 stories using it gain the
+  button with no per-story changes.
+- Controls now share one rAF handle and kick the state-mirror loop on every
+  action; previously that loop stopped whenever playback left "running", so a
+  play-after-finish, reset, or seek left the readout showing stale time/state.
+
+Fix the WebGL and WebGPU target stories (they rendered nothing):
+- Root cause: both call useKeyframePlayback but never attached its hostRef to
+  any element, so the hook's effect early-returned on a null host — no playback
+  instance was ever created, transport buttons silently did nothing, and the
+  uniform upload/write readouts stayed empty.
+- Both now attach hostRef to their layout wrapper (the custom-target pattern:
+  host for layout only; the GPU adapters ignore it).
+
+Fix a latent engine defect the GPU work surfaced (playback.ts):
+- Button-restarted runs could finish instantly. A frame callback can deliver a
+  timestamp older than the anchor captured in play() (input dispatched inside an
+  already-started frame); a run always begins exactly on a timeline boundary, so
+  even a few ms of negative delta crossed the opposite boundary and completed it
+  in one step. onEngineUpdate now ignores non-forward timestamps (§16) without
+  double-counting the skipped interval. Two unit regression tests added (boundary
+  restart with stale timestamp; mid-run out-of-order frame) — Node suite 247.
+
+Verified against the rebuilt static Storybook: all 18 stories render, every
+transport shows reset, and a reverse → reset → play round trip advances t from 0
+to duration forward on both GPU targets, zero console errors. Unit (247),
+browser (20), examples tsc, lint, format, and type checks all green.
