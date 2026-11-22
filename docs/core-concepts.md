@@ -79,6 +79,20 @@ const orbit = transform()
   .translate(100, 0);
 ```
 
+The demo below runs both snippets from above side by side: each box animates
+from identity to its composed result, so where they end up shows exactly how
+the call order changes the product `M = T × R × S`.
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=guides-core-concepts--crane-vs-orbit title="Live demo — crane vs orbit: the same operations, opposite order" height=380 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/guides-core-concepts--crane-vs-orbit)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/guides-core-concepts--crane-vs-orbit)
+for the two definitions side by side with explanations.
+
 For operations expressed in the parent (world) frame, use the `world*`
 variants — `worldTranslate`, `worldRotateX/Y/Z`, `worldRotate` — which apply
 in the parent frame rather than the local one.
@@ -122,8 +136,8 @@ accepts any object with the named members, structurally (§2 principle 1).
 
 ## See also
 
-- API reference: [`Transform`](../transform//,
-  [`Matrix4`](../matrix4//, [`Quaternion`](../quaternion//
+- API reference: [`Transform`](../transform/),
+  [`Matrix4`](../matrix4/), [`Quaternion`](../quaternion/)
 - [Animation authoring](../animation-authoring/) — building on these types
 - [Render adapters](../render-adapters/) — how the conventions surface in CSS,
   SVG, and GPU upload paths

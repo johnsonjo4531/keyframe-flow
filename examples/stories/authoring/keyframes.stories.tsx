@@ -1,35 +1,45 @@
-import { Animation, target } from "keyframe-flow";
+import { Animation, target, transform } from "keyframe-flow";
 import type * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { useCallback, useMemo } from "react";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
 /**
- * Static keyframes (§5.3): `at` is normalized progress in `[0, 1]` (§6.1),
- * so re-timing only changes `duration`. Timestamps must be strictly
- * increasing — duplicates and reordering throw at definition time (§6.3).
+ * Keyframe definitions (§5.3, §6.1), mirroring the `bounce` snippet in the
+ * [Animation authoring guide](https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/):
+ * `at` is normalized progress in `[0, 1]` — fractions of the timeline,
+ * independent of `duration` — so re-timing never rewrites keyframes.
+ * Validation is eager and strict (§6.3): timestamps must be finite, in range,
+ * and strictly increasing. The infinite loop just replays the drop-and-settle.
  */
 function KeyframesStory({ duration }: { duration: number }): React.ReactElement {
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () =>
       Animation.from({
         duration,
-        easing: "ease-in-out", // default for segments without an override (§8)
         keyframes: [
-          { at: 0, transform: { position: [-140, -50, 0] } },
-          { at: 0.35, transform: { position: [140, -50, 0], rotation: [0, 0, Math.PI / 4] } },
-          { at: 0.7, transform: { position: [140, 50, 0], rotation: [0, 0, -Math.PI / 4] } },
-          { at: 1, transform: { position: [-140, 50, 0] } },
+          { at: 0, transform: transform().translate(0, -100) }, // starts high
+          { at: 0.6, transform: transform() }, // lands at rest by 60 %
+          { at: 0.75, transform: transform().translate(0, -30) }, // small rebound
+          { at: 0.9, transform: transform() }, // settles again
+          { at: 1, transform: transform() }, // holds through the end
         ],
       }),
-    (host) => target.html(host),
     [duration],
   );
+  const makeTarget = useCallback((host: HTMLElement) => target.html(host), []);
+  const handle = useKeyframePlayback(animation, {
+    autoplay: true,
+    iterations: "infinite", // replay the drop-and-settle for demo visibility
+    makeTarget,
+  });
 
   return (
     <div style={{ display: "grid", justifyItems: "center" }}>
       <div style={{ width: 360, height: 200, position: "relative" }}>
         <div
-          ref={handle.hostRef}
+          ref={handle.ref}
           style={{
             position: "absolute",
             left: "50%",
@@ -52,7 +62,9 @@ function KeyframesStory({ duration }: { duration: number }): React.ReactElement 
 const meta = {
   title: "Authoring/Keyframes",
   component: KeyframesStory,
-  args: { duration: 2000 },
+  args: {
+    duration: 1200, // the guide's bounce duration
+  },
   argTypes: {
     duration: { control: { type: "range", min: 200, max: 8000, step: 100 } },
   },
@@ -61,5 +73,5 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A four-keyframe zig-zag path with orientation changes. */
-export const ZigZag: Story = {};
+/** The guide's `bounce`: drop, land, rebound, settle — normalized keyframes. */
+export const Bounce: Story = {};

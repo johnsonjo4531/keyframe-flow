@@ -6,12 +6,107 @@ follows a keep-a-changelog style and the version numbers follow
 
 ## 0.0.0
 
+### Milestone 11 — Documentation-Local Links, Guide-Aligned Examples & Gallery Polish (T58–T60)
+
+- **Local previews now stay local.** `docs/embed-host-rewrite.js` rewrites not
+  only Storybook iframe embeds but also the "Open in Storybook" and
+  "▶ Vanilla TypeScript implementation" anchor links to same-origin paths when
+  served from any host other than the published GitHub Pages origin. Fixed
+  `make preview-site`'s server: `serve` 301-redirects `*.html` requests and
+  drops query strings — which blanked every Storybook embed ("No Preview") —
+  so the target now uses Python's stdlib server (GitHub Pages keeps query
+  strings; published embeds unaffected).
+- **Storybook examples now mirror the documentation.** New **Guides** story
+  section runs guide snippets verbatim: `guides-getting-started--first-animation`
+  (the three-object-model `slide`), `guides-getting-started--sample-without-playing`
+  (the same definition sampled by a host rAF loop), and
+  `guides-core-concepts--crane-vs-orbit` (composition order: same operations,
+  opposite order, endpoints (100,0) vs (0,100)). Existing embedded stories were
+  realigned with their guide snippets — from/to now is the guide's `fadeUp`,
+  keyframes the `bounce` path, combine the exact move/spin/pulse values, orbit
+  the radius-80 generator at 4000 ms, and SLERP-vs-angular the 1000 ms full
+  revolution. The two unrelated getting-started embeds and core-concepts embed
+  were replaced; every story gained a substantive Docs description explaining
+  what it demonstrates and linking its guide section. Vanilla twins and gallery
+  entries follow all new/renamed ids (21 examples total). `Matrix4.el(index)`
+  became public so the guides' documented `m.el(12)` column-major reads compile
+  verbatim.
+- **Examples gallery polish.** `/keyframe-flow/examples/` gained a header
+  light/dark toggle (persisted to localStorage, following
+  `prefers-color-scheme`, applied pre-paint via CSS custom properties) and full
+  Prism syntax highlighting of the TypeScript and TSX code panels with theme
+  token palettes for both modes.
+
+### Milestone 10 — React Helpers, Vanilla Examples Gallery & Link Fixes (T51–T57)
+
+- Added a **`keyframe-flow/react` subpath** with dedicated React component
+  helpers: `useKeyframePlayback(animation, options)` (host ref, frame-mirrored
+  state readout with control-kick resync, full transport including the
+  forward-facing `reset()`) and `<Animated>`, a declarative host-div wrapper
+  defaulting to `target.html`. React is an external peer dependency of that
+  entry only; the core build still never sees DOM or React types (core
+  tsconfig excludes `src/react`; a new `tsconfig.react.json` + `make
+  typecheck-react` cover it), and browser tests exercise attach/re-attach/
+  dispose lifecycle. All 18 stories now run on the library hook — story-side
+  code keeps only transport/readout chrome. Documented in the new
+  **`docs/react-integration.md`** guide.
+- Shipped a **standalone vanilla-TypeScript examples gallery** at
+  `/keyframe-flow/examples/`: every Storybook example has a pure-TS twin under
+  `examples/vanilla/` (imports only `keyframe-flow` + DOM APIs, driven by a
+  shared imperative transport/readout harness), presented by a small Vite app
+  (`examples/gallery/`, built via `make build-gallery`) with a landing page per
+  section and hash-routed pages pairing the live demo with its source —
+  toggleable between the TypeScript implementation and the React twin. Docs
+  embeds link down to their gallery page. Storybook stays React-only: it binds
+  one UI renderer per build, so plain-DOM stories can't share a build with
+  React ones.
+- Fixed **"Open in Storybook" deep links** (19 across the guides): the manager
+  ignores bare `?id=<story-id>`; all links now use the canonical
+  `?path=/story/<story-id>` route form, Playwright-verified to land on the
+  exact linked story. Guide gallery/deep links use absolute published-host URLs
+  because relative and root-relative forms break under theme link rewriting or
+  servers that omit trailing slashes.
+- Fixed unclosed markdown links in `README.md` (vision/concepts bullet + docs
+  table rows) and `docs/core-concepts.md` API-reference bullets.
+- Added **`make preview-site`**: serves the built `site/` (docs + Storybook +
+  gallery) at `http://localhost:4173/keyframe-flow/` via `pnpm dlx serve`
+  (Python fallback), using a `.preview/` symlink so the site's absolute base
+  paths resolve.
+
+### Milestone 9 — Interactive Documentation Examples (T50)
+
+- Embedded **playable Storybook demos directly in the docs guides**: 19 live
+  embeds across all six guides (getting-started, core-concepts,
+  animation-authoring, easing-interpolation, playback-lifecycle,
+  render-adapters), built with clean-jsdoc-theme v5's `iframe` fence — each
+  points at the bare story canvas (`storybook/iframe.html?id=<story-id>`) so it
+  carries its own transport (play/pause/reset/reverse/cancel), and each is
+  paired with an "Open in Storybook" link to the full story with arg controls.
+  The pattern, URL conventions, and local-preview recipe are documented in
+  `docs/contributing-docs.md`.
+- Added `docs/embed-host-rewrite.js`, injected into every generated docs page
+  by `make build-docs`: embed URLs are protocol-relative and pinned to the
+  published GitHub Pages host (the theme only accepts `https://` or `//` URLs),
+  so the shim — a no-op on Pages itself — rewrites them to same-origin for any
+  other origin, letting a locally served copy of `site/` preview embeds against
+  the local Storybook build.
+- Fixed a second embedded-context engine defect found during verification: in
+  nested iframes, rAF callback timestamps can stall relative to the realm's
+  `performance.now()`, and `PlaybackEngine._requestFrame` stepped playbacks by
+  the scheduler callback argument while `play()` anchors from `clock.now()` —
+  so the non-forward guard skipped every update and runs froze at `t = 0`. The
+  engine now dispatches `clock.now()` to playbacks and ignores the callback
+  argument, honoring Appendix B.7 ("scheduling is not timekeeping"); the guard
+  in `onEngineUpdate` remains as defense against non-monotonic custom clocks.
+  One unit regression test added (engine steps from its Clock, not frame
+  timestamps), bringing the Node suite to 248.
+
 ### Milestone 8 — Storybook Reset Control & GPU Example Fixes (T48–T49)
 
 - Added a **reset** control to the shared Storybook transport so every example
   can rewind and replay from the beginning facing forward. `useKeyframePlayback`
   now exposes `reset()`, which seeks playback to progress 0 and — because §12
-  restarts a run in its *current* direction — flips the instance back to
+  restarts a run in its _current_ direction — flips the instance back to
   forward if it was reversed, so a subsequent `play()` always runs 0 → 1 rather
   than backwards. The button is wired into the shared `Transport`, so all 14
   stories using it gain reset for free.

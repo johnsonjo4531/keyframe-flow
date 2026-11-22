@@ -7,7 +7,7 @@ import { playwright } from "vite-plus/test/browser-playwright";
 // free of browser dependencies (§2 principle 1, §15.2).
 export default defineConfig({
   test: {
-    include: ["src/**/*.browser.test.ts"],
+    include: ["src/**/*.browser.test.ts", "src/**/*.browser.test.tsx"],
     browser: {
       enabled: true,
       headless: true,

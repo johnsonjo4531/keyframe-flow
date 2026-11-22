@@ -1,8 +1,9 @@
 import { Animation, target } from "keyframe-flow";
 import type * as React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
 /**
  * WebGL adapter (§3.6): the adapter never creates GPU resources — it hands
@@ -16,7 +17,7 @@ function WebGLTargetStory({ duration }: { duration: number }): React.ReactElemen
   const uModelRef = useRef<WebGLUniformLocation | null>(null);
   const [supported, setSupported] = useState(true);
   const [uploaded, setUploaded] = useState("");
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () =>
       Animation.from({
         from: { position: [-0.8, -0.4, 0], scale: 0.5 },
@@ -24,6 +25,9 @@ function WebGLTargetStory({ duration }: { duration: number }): React.ReactElemen
         duration,
         easing: "ease-in-out",
       }),
+    [duration],
+  );
+  const makeTarget = useCallback(
     () =>
       target.webgl({
         onTransform: (values) => {
@@ -34,8 +38,9 @@ function WebGLTargetStory({ duration }: { duration: number }): React.ReactElemen
           glRef.current?.uniformMatrix4fv(uModelRef.current, false, values);
         },
       }),
-    [duration],
+    [],
   );
+  const handle = useKeyframePlayback(animation, { autoplay: true, makeTarget });
 
   // Story-owned GL setup: compile a trivial shader, draw a quad transformed
   // by the uniform the adapter keeps fresh.
@@ -104,7 +109,7 @@ function WebGLTargetStory({ duration }: { duration: number }): React.ReactElemen
   return (
     // hostRef is required by useKeyframePlayback (it builds the playback from
     // a mounted host) but layout-only here — the WebGL target ignores it.
-    <div ref={handle.hostRef} style={{ display: "grid", justifyItems: "center" }}>
+    <div ref={handle.ref} style={{ display: "grid", justifyItems: "center" }}>
       <canvas ref={canvasRef} width={420} height={220} style={{ maxWidth: "100%" }} />
       <code style={{ fontSize: 11, color: "#9ca3af" }}>uniform upload — {uploaded}</code>
       <Transport handle={handle} />
@@ -116,7 +121,9 @@ function WebGLTargetStory({ duration }: { duration: number }): React.ReactElemen
 const meta = {
   title: "Targets/WebGL Adapter",
   component: WebGLTargetStory,
-  args: { duration: 1600 },
+  args: {
+    duration: 1600,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 200, max: 5000, step: 100 } },
   },
@@ -125,5 +132,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Column-major `Float32Array` handed straight to `uniformMatrix4fv`. */
+/**
+ * The WebGL section of the
+ * [Render adapters guide](https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/):
+ * the adapter creates no GL resources — each frame it hands the host a
+ * column-major `Float32Array` through `onTransform`, exactly what
+ * `gl.uniformMatrix4fv` wants. The story owns the context and draw loop; the
+ * spinning cube is drawn by that loop with the uploaded uniform.
+ */
 export const UniformUpload: Story = {};

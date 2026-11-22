@@ -1,9 +1,10 @@
 import { Animation } from "keyframe-flow";
 import type { Matrix4, RenderTarget } from "keyframe-flow";
 import type * as React from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
 /**
  * Custom structural target (§17.1): any object with `setTransform(matrix)`
@@ -29,7 +30,7 @@ function CustomTargetStory({ duration }: { duration: number }): React.ReactEleme
     return targetObject;
   }, []);
 
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () =>
       Animation.from({
         from: { position: [-120, -40, 0] },
@@ -37,9 +38,10 @@ function CustomTargetStory({ duration }: { duration: number }): React.ReactEleme
         duration,
         easing: "ease-in-out",
       }),
-    () => recorder,
     [duration, recorder],
   );
+  const makeTarget = useCallback(() => recorder, [recorder]);
+  const handle = useKeyframePlayback(animation, { autoplay: true, makeTarget });
 
   // Column-major storage: translation lives at indices 12–14 (§15). The
   // custom target receives raw matrices — reading elements directly is the
@@ -51,7 +53,7 @@ function CustomTargetStory({ duration }: { duration: number }): React.ReactEleme
     <div style={{ display: "grid", justifyItems: "center" }}>
       <div style={{ width: 360, height: 160, position: "relative" }}>
         <div
-          ref={handle.hostRef} // host only for layout; the custom target ignores it
+          ref={handle.ref} // host only for layout; the custom target ignores it
           style={{
             position: "absolute",
             left: `calc(50% + ${(x ?? -120).toFixed(1)}px)`,
@@ -77,7 +79,9 @@ function CustomTargetStory({ duration }: { duration: number }): React.ReactEleme
 const meta = {
   title: "Targets/Custom Structural Target",
   component: CustomTargetStory,
-  args: { duration: 1600 },
+  args: {
+    duration: 1600,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 200, max: 5000, step: 100 } },
   },
@@ -86,5 +90,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A plain object target receiving evaluated matrices per frame. */
+/**
+ * The custom-target section of the
+ * [Render adapters guide](https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/):
+ * the recorder below is a plain object with one method,
+ * `setTransform(matrix)` — that is the entire contract (§17.1). It stores
+ * every evaluated matrix and renders itself; disposal leaves it fully intact
+ * (§17.2), which the readout proves after you press cancel.
+ */
 export const MatrixRecorder: Story = {};

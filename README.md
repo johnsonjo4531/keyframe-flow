@@ -19,7 +19,7 @@ mathematical meaning, never raw element copies.
   runs in plain Node.js (§2 principle 1 of the design docs).
 - **One coordinate convention, stated explicitly** — right-handed, column
   vectors, intrinsic `X → Y → Z` Euler order in radians, column-major matrix
-  storage. See [Core concepts & coordinate conventions](https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/.
+  storage. See [Core concepts & coordinate conventions](https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/).
 - **Definitions are not playback** — an `Animation` is an immutable, reusable
   description; every `attach()` yields an independent `Playback` instance with
   its own time and lifecycle.
@@ -72,15 +72,15 @@ const matrix = halfway.toMatrix(); // Matrix4, column-major storage
 
 Guides in this repository live under `docs/`:
 
-| Guide                                                                                                      | Covers                                                     |
-| ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [Getting started](https://johnsonjo4531.github.io/keyframe-flow/docs/getting-started/                      | Install, first animation, mental model                     |
-| [Core concepts & coordinate conventions](https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/ | Handedness, column vectors, Euler order, composition order |
-| [Animation authoring](https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/              | From/to, property-level, keyframes, generators             |
-| [Easing & interpolation](https://johnsonjo4531.github.io/keyframe-flow/docs/easing-interpolation/          | Named easings, custom curves, SLERP, angular tracks        |
-| [Playback & lifecycle](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/              | States, rates, repetition, promises, disposal              |
-| [Render adapters & custom targets](https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/     | HTML/SVG/Canvas/WebGL/WebGPU, structural targets           |
-| [Contributing docs](https://johnsonjo4531.github.io/keyframe-flow/docs/contributing-docs/                  | The documentation pipeline itself                          |
+| Guide                                                                                                       | Covers                                                     |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [Getting started](https://johnsonjo4531.github.io/keyframe-flow/docs/getting-started/)                      | Install, first animation, mental model                     |
+| [Core concepts & coordinate conventions](https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/) | Handedness, column vectors, Euler order, composition order |
+| [Animation authoring](https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/)              | From/to, property-level, keyframes, generators             |
+| [Easing & interpolation](https://johnsonjo4531.github.io/keyframe-flow/docs/easing-interpolation/)          | Named easings, custom curves, SLERP, angular tracks        |
+| [Playback & lifecycle](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/)              | States, rates, repetition, promises, disposal              |
+| [Render adapters & custom targets](https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/)     | HTML/SVG/Canvas/WebGL/WebGPU, structural targets           |
+| [Contributing docs](https://johnsonjo4531.github.io/keyframe-flow/docs/contributing-docs/)                  | The documentation pipeline itself                          |
 
 Internal design rationale lives in [`design-docs/vision.md`](https://github.com/johnsonjo4531/keyframe-flow/blob/main/design-docs/vision.md) —
 the source of truth the guides above link to rather than duplicate.

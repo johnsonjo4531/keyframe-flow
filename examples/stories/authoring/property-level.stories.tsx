@@ -1,12 +1,16 @@
 import { Animation, target } from "keyframe-flow";
 import type * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { useCallback, useMemo } from "react";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
 /**
- * Property-level definitions (§7): specify only the properties that change —
- * everything else is preserved from the start transform. Here only `scale`
- * animates; position and rotation stay exactly as authored.
+ * Property-level definitions (§7), mirroring the `grow` snippet in the
+ * [Animation authoring guide](https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/):
+ * no `from` at all — the start is documented identity — and only `scale` is
+ * animated, so position and rotation are untouched property tracks. The loop
+ * options exist only to keep the 250 ms snippet visible between replays.
  */
 function PropertyLevelStory({
   duration,
@@ -15,22 +19,28 @@ function PropertyLevelStory({
   duration: number;
   toScale: number;
 }): React.ReactElement {
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () =>
       Animation.from({
-        from: { position: [-60, 20, 0], rotation: [0, 0, -Math.PI / 8] },
-        to: { scale: toScale }, // only scale changes (§7)
+        // No `from`: starts from identity (§7). Only scale changes.
+        to: { scale: toScale },
         duration,
       }),
-    (host) => target.html(host),
     [duration, toScale],
   );
+  const makeTarget = useCallback((host: HTMLElement) => target.html(host), []);
+  const handle = useKeyframePlayback(animation, {
+    autoplay: true,
+    iterations: "infinite", // loop the short snippet for demo visibility
+    direction: "alternate",
+    makeTarget,
+  });
 
   return (
     <div style={{ display: "grid", justifyItems: "center" }}>
       <div style={{ width: 320, height: 160, position: "relative" }}>
         <div
-          ref={handle.hostRef}
+          ref={handle.ref}
           style={{
             position: "absolute",
             left: "50%",
@@ -53,7 +63,10 @@ function PropertyLevelStory({
 const meta = {
   title: "Authoring/Property Level",
   component: PropertyLevelStory,
-  args: { duration: 900, toScale: 1.8 },
+  args: {
+    duration: 250, // the guide's grow duration
+    toScale: 1.5,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 100, max: 5000, step: 100 } },
     toScale: { control: { type: "range", min: 0.2, max: 3, step: 0.1 } },
@@ -63,5 +76,5 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A scale-only animation over a non-identity start transform. */
+/** The guide's `grow`: scale 1 → 1.5 from identity — position/rotation untouched. */
 export const ScaleOnly: Story = {};

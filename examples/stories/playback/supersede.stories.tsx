@@ -100,7 +100,9 @@ function SupersedeStory({ duration }: { duration: number }): React.ReactElement 
 const meta = {
   title: "Playback/Target Supersede",
   component: SupersedeStory,
-  args: { duration: 2000 },
+  args: {
+    duration: 2000,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 500, max: 6000, step: 100 } },
   },
@@ -109,5 +111,11 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Start A, then B — watch A resolve `cancelled` while B takes over. */
+/**
+ * Target ownership from the
+ * [Playback & lifecycle guide](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/):
+ * press ▶ B while A is running and ownership transfers — A's `finished`
+ * resolves `{ status: "cancelled" }`, A stops writing, and only B keeps
+ * driving the element. Replacement, not composition (§14).
+ */
 export const OwnershipTransfer: Story = {};

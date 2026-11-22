@@ -179,8 +179,14 @@ export class Matrix4 {
     return this.el(column * 4 + row);
   }
 
-  /** Internal raw storage read (indices are always in range internally). */
-  private el(index: number): number {
+  /**
+   * Reads the raw element at a column-major storage index (§15): `el(0..3)`
+   * is the first column, and `el(12)`, `el(13)`, `el(14)` are the translation
+   * x/y/z. This is the layout CSS `matrix3d()`, `gl.uniformMatrix4fv`, and
+   * `queue.writeBuffer` uploads expect; see also {@link Matrix4#at} for
+   * `(row, column)` access.
+   */
+  el(index: number): number {
     return this.elements[index] as number;
   }
 

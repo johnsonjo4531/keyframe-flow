@@ -61,6 +61,9 @@ const config: StorybookConfig = {
       ...(viteConfig.resolve.alias as Record<string, string>),
       // Storybook rewrites plugin paths relative to its Vite root (examples/),
       // so hand it an absolute path computed from this file's real location.
+      // The `react` subpath must precede the bare specifier: aliases match by
+      // prefix, and "keyframe-flow" would otherwise swallow "keyframe-flow/react".
+      "keyframe-flow/react": `${storybookDir}/../../src/react/index.ts`,
       "keyframe-flow": `${storybookDir}/../../src/index.ts`,
     };
     viteConfig.plugins = [...(viteConfig.plugins ?? []), injectStorySourcePlugin()];

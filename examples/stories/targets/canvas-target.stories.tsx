@@ -1,8 +1,9 @@
 import { Animation, projectToCanvas2D, target } from "keyframe-flow";
 import type * as React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
 /**
  * Canvas 2D adapter (§17.3): the evaluated 4×4 matrix goes through an
@@ -18,7 +19,7 @@ function CanvasTargetStory({
 }): React.ReactElement {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [projected, setProjected] = useState("");
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () =>
       Animation.from({
         from: { position: [-120, 0, -40], rotation: [0, 0, 0] },
@@ -26,15 +27,19 @@ function CanvasTargetStory({
         duration,
         easing: "linear",
       }),
-    (host) => {
+    [duration, perspective],
+  );
+  const makeTarget = useCallback(
+    (host: HTMLElement) => {
       const canvas = host.querySelector("canvas");
       const ctx = canvas?.getContext("2d");
       if (ctx === undefined || ctx === null)
         throw new Error("Canvas 2D unavailable in story host.");
       return target.canvas(ctx, perspective > 0 ? { perspective } : undefined);
     },
-    [duration, perspective],
+    [perspective],
   );
+  const handle = useKeyframePlayback(animation, { autoplay: true, makeTarget });
 
   // The adapter owns the CTM; this loop just draws with it every frame.
   useEffect(() => {
@@ -71,7 +76,7 @@ function CanvasTargetStory({
 
   return (
     <div style={{ display: "grid", justifyItems: "center" }}>
-      <div ref={handle.hostRef}>
+      <div ref={handle.ref}>
         <canvas ref={canvasRef} width={420} height={180} />
       </div>
       {projected !== "" && <code style={{ fontSize: 11, color: "#9ca3af" }}>CTM: {projected}</code>}
@@ -84,7 +89,10 @@ function CanvasTargetStory({
 const meta = {
   title: "Targets/Canvas 2D Adapter",
   component: CanvasTargetStory,
-  args: { duration: 1800, perspective: 400 },
+  args: {
+    duration: 1800,
+    perspective: 400,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 200, max: 5000, step: 100 } },
     perspective: { control: { type: "range", min: 0, max: 1200, step: 50 } },
@@ -94,5 +102,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Z motion becomes visible scale/offset through the projection step. */
+/**
+ * The Canvas 2D section of the
+ * [Render adapters guide](https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/):
+ * a 4×4 matrix cannot land on a 2D context raw, so the adapter projects it
+ * through a perspective divide and installs the fitted affine with
+ * `setTransform` — replacing the CTM deterministically each frame (§17.3).
+ * Z motion becomes visible scale/offset in the drawing.
+ */
 export const ProjectedMotion: Story = {};

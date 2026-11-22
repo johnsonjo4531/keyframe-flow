@@ -151,6 +151,23 @@ describe("playback scheduling (§16)", () => {
     expect(playback.currentTime).toBeCloseTo(400, 9); // time retained, not reversed
   });
 
+  it("steps playbacks from its Clock, not scheduler callback timestamps (§16)", () => {
+    // The engine must never advance time by a frame callback's argument —
+    // nested-iframe rAF timestamps can stall against the realm clock, and
+    // stepping by them freezes (or finishes) runs at boundaries.
+    const h = createHarness();
+    const playback = moveAnimation(1000).attach(undefined, { engine: h.engine });
+
+    playback.play(); // anchors at clock.now() = 0
+    h.clock.advance(50);
+    h.scheduler.tick(12345); // arbitrary frame timestamp — the engine ignores it
+    expect(playback.currentTime).toBeCloseTo(50, 9);
+
+    h.clock.advance(70);
+    h.scheduler.tick(-10); // stale again — still advanced from the clock
+    expect(playback.currentTime).toBeCloseTo(120, 9);
+  });
+
   it("ManualScheduler fires one-shot requests in order and honors cancel", () => {
     const scheduler = new ManualScheduler();
     const seen: number[] = [];

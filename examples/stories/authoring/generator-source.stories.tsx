@@ -1,28 +1,28 @@
-import { Animation, target } from "keyframe-flow";
+import { Animation, target, transform } from "keyframe-flow";
 import type { TransformKeyframe } from "keyframe-flow";
 import type * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { useCallback, useMemo } from "react";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
-/** Generator keyframes (§5.4): any synchronous iterable works (§5.3). */
-function* orbitKeyframes(samples: number): Generator<TransformKeyframe> {
-  for (let i = 0; i <= samples; i++) {
-    const t = i / samples;
-    const angle = t * Math.PI * 2;
+/** The guide's `orbitKeyframes`: a circle of radius 80, one keyframe per step. */
+function* orbitKeyframes(count: number): Generator<TransformKeyframe> {
+  for (let i = 0; i <= count; i++) {
+    const angle = (i / count) * Math.PI * 2;
     yield {
-      at: t,
-      transform: {
-        position: [Math.cos(angle) * 110, Math.sin(angle) * 70, 0],
-        rotation: [0, 0, angle], // keep the box facing along the path
-      },
+      at: i / count,
+      transform: transform().translate(Math.cos(angle) * 80, Math.sin(angle) * 80),
     };
   }
 }
 
 /**
- * Generator sources (§5.4–§5.5): `Animation.from` consumes the iterable
- * eagerly and exactly once at definition time — playback afterwards reads a
- * frozen shared timeline, so generators never re-run per frame.
+ * Generator sources (§5.4–§5.5), mirroring the `orbit` snippet in the
+ * [Animation authoring guide](https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/):
+ * any synchronous iterable is a keyframe source, consumed eagerly and exactly
+ * once when `Animation.from()` runs — playback afterwards reads a frozen
+ * shared timeline, so the generator never re-runs per frame.
  */
 function GeneratorStory({
   duration,
@@ -31,17 +31,18 @@ function GeneratorStory({
   duration: number;
   samples: number;
 }): React.ReactElement {
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () => Animation.from({ duration, keyframes: orbitKeyframes(samples) }),
-    (host) => target.html(host),
     [duration, samples],
   );
+  const makeTarget = useCallback((host: HTMLElement) => target.html(host), []);
+  const handle = useKeyframePlayback(animation, { autoplay: true, makeTarget });
 
   return (
     <div style={{ display: "grid", justifyItems: "center" }}>
       <div style={{ width: 320, height: 200, position: "relative" }}>
         <div
-          ref={handle.hostRef}
+          ref={handle.ref}
           style={{
             position: "absolute",
             left: "50%",
@@ -64,7 +65,10 @@ function GeneratorStory({
 const meta = {
   title: "Authoring/Generator Source",
   component: GeneratorStory,
-  args: { duration: 3000, samples: 24 },
+  args: {
+    duration: 4000, // the guide's orbit duration
+    samples: 24,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 500, max: 8000, step: 100 } },
     samples: { control: { type: "range", min: 4, max: 64, step: 2 } },
@@ -74,5 +78,5 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** An elliptical orbit generated from a factory function. */
+/** The guide's `orbit`: 24 circular keyframes produced by a generator function. */
 export const Orbit: Story = {};

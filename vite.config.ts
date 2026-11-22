@@ -7,10 +7,16 @@ import { defineConfig } from "vite-plus";
 export default defineConfig({
   build: {
     lib: {
-      entry: "src/index.ts",
+      // Two entry points: the framework-free core and the React integration
+      // (T52), published as "." and "./react" via package.json exports.
+      entry: { index: "src/index.ts", react: "src/react/index.ts" },
       formats: ["es"],
-      fileName: "keyframe-flow",
+      // Rolldown takes `fileName` verbatim, so spell out the extension.
+      fileName: (_format, entryName) =>
+        entryName === "index" ? "keyframe-flow.js" : `keyframe-flow.${entryName}.js`,
     },
+    // React is a peer of the ./react subpath only — never bundled into output.
+    rollupOptions: { external: [/^react(\/|$)/] },
     sourcemap: true,
   },
   lint: {

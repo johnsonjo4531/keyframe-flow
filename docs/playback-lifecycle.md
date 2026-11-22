@@ -55,6 +55,19 @@ Key guarantees:
   the render target, and any DOM/GPU objects survive untouched (Appendix B.8);
   adapter-level cleanup hooks run at most once.
 
+Drive every transition yourself — play, pause, reset, reverse, cancel — with a
+live readout of `state`, `currentTime`, and iteration:
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-lifecycle--transport-controls title="Live demo — playback transport and state machine" height=470 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-lifecycle--transport-controls)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-lifecycle--transport-controls)
+for the full example.
+
 ## Playback rate
 
 `playbackRate` is settable while running and continuous — changing it never
@@ -81,6 +94,19 @@ const pendulum = slide.attach(target.html(element), {
   stalls, high rates) without losing sync — time is computed from timestamps,
   never counted per frame (§16).
 
+Three alternate iterations, forward–back–forward, with the iteration counter
+visible:
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-repetition-direction--alternate-thrice title="Live demo — three alternating iterations" height=470 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-repetition-direction--alternate-thrice)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-repetition-direction--alternate-thrice)
+for the options.
+
 ## Target ownership: replacement, not composition (§14)
 
 Starting a playback on a target **supersedes** the previous owner: the older
@@ -88,6 +114,19 @@ playback is cancelled (its `finished` resolves `{ status: "cancelled" }`) and
 the newest one exclusively drives the target. There is no additive blending —
 if you want two motions to combine, compose the animations first with
 `Animation.combine`, then attach once.
+
+Start A, then B: A's `finished` resolves `{ status: "cancelled" }` while B takes
+over the shared target — no blending, both statuses shown live:
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-target-supersede--ownership-transfer title="Live demo — target supersede and ownership transfer" height=460 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-target-supersede--ownership-transfer)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-target-supersede--ownership-transfer)
+for the two playbacks.
 
 ## Deterministic testing with manual timing
 

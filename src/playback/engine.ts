@@ -82,9 +82,15 @@ export class PlaybackEngine {
   }
 
   private _requestFrame(): void {
-    this._frameHandle = this._scheduler.request((timeMs) => {
+    this._frameHandle = this._scheduler.request(() => {
       this._frameHandle = null;
-      this._updateAll(timeMs);
+      // Read the timestamp from the Clock, never trust the scheduler callback
+      // argument (Appendix B.7): frame timestamps can lag a realm's clock — a
+      // nested iframe's rAF timestamp can stall relative to its own
+      // `performance.now()` — and anchoring on `clock.now()` while stepping by
+      // the callback argument would then freeze playbacks against the
+      // non-forward guard, or finish them instantly (§16).
+      this._updateAll(this.clock.now());
     });
   }
 

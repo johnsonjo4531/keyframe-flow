@@ -1,36 +1,55 @@
-fix(storybook): rewind-and-replay forward; repair WebGL/WebGPU stories (T48–T49)
+feat: guide-aligned Storybook examples, local-preview link fixes, gallery polish
 
-Two Storybook fixes, both found and verified through the Playwright MCP server.
+Documentation and examples now tell one consistent story: every embedded
+example runs the code printed beside it, local previews stay on localhost, and
+the vanilla-TypeScript gallery gains theming and syntax highlighting.
 
-Add a reset control to every transport-bearing example:
-- useKeyframePlayback now exposes reset(): seek to progress 0 AND restore
-  forward direction. §12 restarts a run in its current direction, so a reversed
-  instance would replay backwards — reset flips it back first, guaranteeing the
-  next play() runs 0 → 1.
-- Wired into the shared Transport component, so all 14 stories using it gain the
-  button with no per-story changes.
-- Controls now share one rAF handle and kick the state-mirror loop on every
-  action; previously that loop stopped whenever playback left "running", so a
-  play-after-finish, reset, or seek left the readout showing stale time/state.
+Guide-aligned Storybook examples (T59):
 
-Fix the WebGL and WebGPU target stories (they rendered nothing):
-- Root cause: both call useKeyframePlayback but never attached its hostRef to
-  any element, so the hook's effect early-returned on a null host — no playback
-  instance was ever created, transport buttons silently did nothing, and the
-  uniform upload/write readouts stayed empty.
-- Both now attach hostRef to their layout wrapper (the custom-target pattern:
-  host for layout only; the GPU adapters ignore it).
+- New "Guides" story section runs guide snippets verbatim:
+  `guides-getting-started--first-animation` (definition + playback + HTML
+  target), `guides-getting-started--sample-without-playing` (the same `slide`
+  sampled by a host rAF loop — no playback, no target), and
+  `guides-core-concepts--crane-vs-orbit` (composition order; endpoints
+  (100, 0) vs (0, 100) make `M ← M × Op` visible).
+- Embedded stories realigned with their guide snippets: from/to is now the
+  guide's `fadeUp` (was slide-and-tilt), keyframes the `bounce` path (was
+  zig-zag), combine the exact move/spin/pulse values, orbit the radius-80
+  generator at 4000 ms, SLERP-vs-angular the 1000 ms full revolution. The two
+  unrelated getting-started embeds and the core-concepts embed were replaced
+  by the new guide stories.
+- Every story now carries a substantive Docs description explaining what it
+  demonstrates and linking its guide section; vanilla twins and gallery
+  registry entries follow all new/renamed ids (21 examples).
+- `Matrix4.el(index)` is public so the guides' documented column-major reads
+  (`m.el(12)`) compile verbatim.
 
-Fix a latent engine defect the GPU work surfaced (playback.ts):
-- Button-restarted runs could finish instantly. A frame callback can deliver a
-  timestamp older than the anchor captured in play() (input dispatched inside an
-  already-started frame); a run always begins exactly on a timeline boundary, so
-  even a few ms of negative delta crossed the opposite boundary and completed it
-  in one step. onEngineUpdate now ignores non-forward timestamps (§16) without
-  double-counting the skipped interval. Two unit regression tests added (boundary
-  restart with stale timestamp; mid-run out-of-order frame) — Node suite 247.
+Local-preview link & embed fixes (T58):
 
-Verified against the rebuilt static Storybook: all 18 stories render, every
-transport shows reset, and a reverse → reset → play round trip advances t from 0
-to duration forward on both GPU targets, zero console errors. Unit (247),
-browser (20), examples tsc, lint, format, and type checks all green.
+- The docs shim now rewrites anchor links ("Open in Storybook",
+  "▶ Vanilla TypeScript implementation") to same-origin paths off-GitHub-Pages,
+  not just iframe srcs — local browsing no longer jumps to the published site.
+- `make preview-site` serves with Python's stdlib server: `serve` 301-redirects
+  `*.html` and drops query strings, which blanked every Storybook embed under
+  local preview ("No Preview"). GitHub Pages keeps query strings; published
+  pages unaffected.
+
+Examples gallery polish (T60):
+
+- Header light/dark toggle: persisted to localStorage, follows
+  `prefers-color-scheme`, applied before first paint; all surfaces use CSS
+  custom properties with a token palette per theme.
+- Prism syntax highlighting for the TypeScript and TSX code panels.
+
+Earlier in this batch (Milestones 9–10): React integration subpath
+(`keyframe-flow/react` with `useKeyframePlayback` + `<Animated>`), standalone
+vanilla-TypeScript gallery at `/keyframe-flow/examples/`, all-React-storybook
+migration onto the library hook, playable docs embeds with host-rewrite shim,
+canonical `?path=/story/` deep links (19 fixed, Playwright-verified), closed
+markdown links, clock-stepped engine, and the new `docs/react-integration.md`
+guide.
+
+All checks green: vp check, 248 unit + 22 browser tests, zero-warning docs
+build; Playwright verified all 21 story canvases render, all 20 guide embeds
+load their exact stories locally, and the gallery (landing, new pages, theme
+persistence, highlighting) works end to end.

@@ -29,6 +29,19 @@ Animation.from({
 > Names are validated eagerly — an unknown easing name throws at
 > `Animation.from()`, not during playback.
 
+The gallery below plots the progress curve of one named easing; pick any of the
+26 with the **easing** control:
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=easing-easing-gallery--curves title="Live demo — easing curve gallery" height=380 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/easing-easing-gallery--curves)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/easing-easing-gallery--curves)
+to switch between all 26 curves.
+
 ## Custom easings
 
 Any `(progress: number) => number` function works with no registration step
@@ -104,6 +117,19 @@ Angles are captured verbatim when you author `rotation` as an `[x, y, z]`
 tuple; quaternion-authored values are decomposed to principal angles instead.
 A single quaternion cannot express "how many turns", which is exactly the
 information angular tracks preserve.
+
+The demo below runs SLERP (collapses to nothing) and angular (a real full turn)
+side by side so the difference is visible:
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=interpolation-slerp-vs-angular--full-revolution title="Live demo — SLERP vs angular full revolution" height=520 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/interpolation-slerp-vs-angular--full-revolution)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/interpolation-slerp-vs-angular--full-revolution)
+for the two definitions.
 
 ## Raw matrix interpolation
 

@@ -1,6 +1,11 @@
 {
   // Visit https://aka.ms/tsconfig to read more about this file
   "include": ["src"],
+  // src/react is the React integration (T52): it legitimately needs DOM and
+  // React types, so it lives outside this project — which machine-checks §2
+  // principle 1 (the core never sees browser or framework types). The React
+  // tree is checked by tsconfig.react.json instead.
+  "exclude": ["src/react"],
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",

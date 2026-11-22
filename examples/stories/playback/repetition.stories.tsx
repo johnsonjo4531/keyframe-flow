@@ -2,7 +2,9 @@ import { Animation, target } from "keyframe-flow";
 import type { PlaybackDirectionMode } from "keyframe-flow";
 import type * as React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { useCallback, useMemo } from "react";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
 /**
  * Repetition & direction (§13): iteration counts (finite or infinite) and
@@ -20,7 +22,7 @@ function RepetitionStory({
   iterations: number | "infinite";
   direction: PlaybackDirectionMode;
 }): React.ReactElement {
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () =>
       Animation.from({
         from: { position: [-140, 0, 0] },
@@ -28,16 +30,21 @@ function RepetitionStory({
         duration,
         easing: "ease-in-out",
       }),
-    (host) => target.html(host),
-    [duration, iterations, direction], // any option change re-attaches
-    () => ({ iterations, direction }),
+    [duration, iterations, direction],
   );
+  const makeTarget = useCallback((host: HTMLElement) => target.html(host), []);
+  const handle = useKeyframePlayback(animation, {
+    autoplay: true,
+    makeTarget,
+    iterations,
+    direction,
+  });
 
   return (
     <div style={{ display: "grid", justifyItems: "center" }}>
       <div style={{ width: 360, height: 140, position: "relative" }}>
         <div
-          ref={handle.hostRef}
+          ref={handle.ref}
           style={{
             position: "absolute",
             left: "50%",
@@ -78,10 +85,21 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Three alternating back-and-forth passes. */
+/**
+ * The §13 example from the
+ * [Playback & lifecycle guide](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/):
+ * three `direction: "alternate"` iterations — forward, back, forward — with
+ * the iteration counter visible. Repetition is an engine-loop concern; the
+ * keyframes are never duplicated.
+ */
 export const AlternateThrice: Story = {};
 
-/** Never-ending alternate ping-pong — `finished` stays pending (§12). */
+/**
+ * The guide's `pendulum` shape: `iterations: "infinite"` with
+ * `direction: "alternate"` never completes, so `finished` stays pending until
+ * cancel or dispose — see the
+ * [repetition section](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/).
+ */
 export const InfiniteAlternate: Story = {
   args: { iterations: "infinite", direction: "alternate" },
 };

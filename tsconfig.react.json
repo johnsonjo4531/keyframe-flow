@@ -1,0 +1,16 @@
+{
+  // Type-checking for the React integration (src/react) — T52. The core
+  // tsconfig deliberately excludes this directory so §2 principle 1 stays
+  // machine-checked (the core never sees DOM or React types); this project
+  // adds the browser + React environment the integration legitimately needs.
+  "extends": "./tsconfig.json",
+  "include": ["src/react"],
+  // Clear the core project's exclude (inherited via extends) so this project
+  // can actually see the directory the core project rejects.
+  "exclude": [],
+  "compilerOptions": {
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  }
+}

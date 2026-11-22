@@ -1,8 +1,9 @@
 import { Animation, target } from "keyframe-flow";
 import type * as React from "react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { Readout, Transport, useKeyframePlayback } from "../playback-story";
+import { Readout, Transport } from "../playback-story";
+import { useKeyframePlayback } from "keyframe-flow/react";
 
 /**
  * Playback & lifecycle (§11–§13): independent `Playback` state machine with
@@ -16,7 +17,7 @@ function LifecycleStory({
   duration: number;
   seek: number;
 }): React.ReactElement {
-  const handle = useKeyframePlayback(
+  const animation = useMemo(
     () =>
       Animation.from({
         from: { position: [-130, 0, 0], rotation: [0, 0, -Math.PI / 3] },
@@ -24,9 +25,10 @@ function LifecycleStory({
         duration,
         easing: "ease-in-out",
       }),
-    (host) => target.html(host),
     [duration],
   );
+  const makeTarget = useCallback((host: HTMLElement) => target.html(host), []);
+  const handle = useKeyframePlayback(animation, { autoplay: true, makeTarget });
 
   // Scrub via seekProgress — clamped to [0, 1] by the engine (§12).
   useEffect(() => {
@@ -38,7 +40,7 @@ function LifecycleStory({
     <div style={{ display: "grid", justifyItems: "center" }}>
       <div style={{ width: 360, height: 140, position: "relative" }}>
         <div
-          ref={handle.hostRef}
+          ref={handle.ref}
           style={{
             position: "absolute",
             left: "50%",
@@ -61,7 +63,10 @@ function LifecycleStory({
 const meta = {
   title: "Playback/Lifecycle",
   component: LifecycleStory,
-  args: { duration: 1500, seek: 0 },
+  args: {
+    duration: 1500,
+    seek: 0,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 200, max: 6000, step: 100 } },
     seek: { control: { type: "range", min: 0, max: 1, step: 0.01 } },
@@ -71,5 +76,13 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Full transport: play, pause, reverse, cancel — plus a progress scrubber. */
+/**
+ * The state machine from the
+ * [Playback & lifecycle guide](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/):
+ * drive every transition of §12 yourself — `idle → running ⇄ paused →
+ * finished | cancelled` — with a live readout of `state`, `currentTime`
+ * (elapsed animation time within the iteration, not wall clock), and
+ * iteration. The scrubber shows `seek(ms)` / `seekProgress(p)` clamping, and
+ * `finished` always resolves with a status object, never rejects.
+ */
 export const TransportControls: Story = {};

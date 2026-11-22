@@ -102,7 +102,10 @@ function EasingGalleryStory({
 const meta = {
   title: "Easing/Easing Gallery",
   component: EasingGalleryStory,
-  args: { name: "ease-in-out-cubic" as EasingName, custom: false },
+  args: {
+    name: "ease-in-out-cubic" as EasingName,
+    custom: false,
+  },
   argTypes: {
     name: { control: "select", options: NAMES },
     custom: { control: "boolean" },
@@ -112,5 +115,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Plot any of the 26 named curves, or a custom easing function. */
+/**
+ * The named-easings and custom-easings sections of the
+ * [Easing & interpolation guide](https://johnsonjo4531.github.io/keyframe-flow/docs/easing-interpolation/),
+ * plotted live: pick any of the 26 built-ins with the `name` control, or flip
+ * `custom` on to see an easing that is just a `(progress) => number` function
+ * — no registration step (§8). The curve is drawn by pure manual sampling; no
+ * playback is involved.
+ */
 export const Curves: Story = {};

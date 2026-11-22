@@ -187,6 +187,9 @@ importers:
       '@storybook/react-vite':
         specifier: ^10.6.7
         version: 10.6.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(storybook@10.6.7(@types/react@19.3.0)(react@19.3.1)(vite-plus@1.7.0(@vitest/browser-playwright@5.1.0)(@vitest/ui@5.1.0)(esbuild@0.28.2)(playwright@1.65.1)(typescript@6.0.3)(yaml@2.9.1)))(typescript@6.0.3)(vite@8.3.8(esbuild@0.28.2)(yaml@2.9.1))
+      '@types/prismjs':
+        specifier: ^1.26.6
+        version: 1.26.6
       '@types/react':
         specifier: ^19.3.0
         version: 19.3.0
@@ -199,6 +202,9 @@ importers:
       playwright:
         specifier: ^1.65.1
         version: 1.65.1
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -1403,6 +1409,9 @@ packages:
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
+  '@types/prismjs@1.26.6':
+    resolution: {integrity: sha512-vqlvI7qlMvcCBbVe0AKAb4f97//Hy0EBTaiW8AalRnG/xAN5zOiWWyrNqNXeq8+KAuvRewjCVY1+IPxk4RdNYw==}
+
   '@types/react-dom@19.3.0':
     resolution: {integrity: sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q==}
     peerDependencies:
@@ -2497,6 +2506,10 @@ packages:
   pretty-format@27.5.1:
     resolution: {integrity: sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
+
+  prismjs@1.30.0:
+    resolution: {integrity: sha512-DEvV2ZF2r2/63V+tK8hQvrR2ZGn10srHbXviTlcv7Kpzw8jWiNTqbVgjO3IY8RxrrOUF8VPMQQFysYYYv0YZxw==}
+    engines: {node: '>=6'}
 
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
@@ -3916,6 +3929,8 @@ snapshots:
 
   '@types/ms@2.1.0': {}
 
+  '@types/prismjs@1.26.6': {}
+
   '@types/react-dom@19.3.0(@types/react@19.3.0)':
     dependencies:
       '@types/react': 19.3.0
@@ -5329,6 +5344,8 @@ snapshots:
       ansi-regex: 5.0.1
       ansi-styles: 5.2.0
       react-is: 17.0.2
+
+  prismjs@1.30.0: {}
 
   property-information@7.2.0: {}
 

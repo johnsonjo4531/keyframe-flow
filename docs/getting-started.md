@@ -53,6 +53,19 @@ await playback.finished; // { status: "finished" } — never rejects
 Swap in `target.svg(gElement)`, `target.canvas(ctx2d)`, or your own object —
 see [Render adapters & custom targets](../render-adapters/).
 
+The example below is live — press play, pause, reset, and reverse right here:
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=guides-getting-started--first-animation title="Live demo — the snippet above, running: definition + playback + HTML target" height=470 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/guides-getting-started--first-animation)
+
+The embed runs exactly the code above — press play, pause, reset, and
+reverse right here. [Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/guides-getting-started--first-animation)
+shows the same example with its full source and explanation.
+
 ## Sample without playing
 
 Manual sampling is first-class: definitions can be evaluated at any time with
@@ -67,6 +80,20 @@ const matrix = halfway.toMatrix(); // Matrix4 for your own upload path
 
 `sample(ms)` and `sampleProgress(p)` evaluate the identical timeline; inputs
 outside `[0, duration]` or `[0, 1]` clamp to the boundaries.
+
+The live example below samples the very same `slide` definition from its
+time in an external `requestAnimationFrame` loop that calls `slide.sample(t)`
+itself — the library runs no playback at all:
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=guides-getting-started--sample-without-playing title="Live demo — the same slide definition, sampled by a host rAF loop" height=420 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/guides-getting-started--sample-without-playing)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/guides-getting-started--sample-without-playing)
+for the full source of the host loop.
 
 ## The three-object model
 
@@ -91,6 +118,8 @@ and targets swappable without touching animation code (Appendix B.1).
   rates, repetition, and disposal.
 - [Render adapters & custom targets](../render-adapters/) — HTML, SVG, Canvas,
   WebGL, WebGPU, and rolling your own.
+- [React Integration](../react-integration/) — `useKeyframePlayback` and
+  `<Animated>` from the `keyframe-flow/react` subpath.
 
 Live versions of every example run in the
 [Storybook examples](../../storybook/).

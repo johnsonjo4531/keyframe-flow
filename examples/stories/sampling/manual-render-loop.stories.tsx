@@ -75,7 +75,9 @@ function ManualLoopStory({ duration }: { duration: number }): React.ReactElement
 const meta = {
   title: "Sampling/Manual Render Loop",
   component: ManualLoopStory,
-  args: { duration: 2000 },
+  args: {
+    duration: 2000,
+  },
   argTypes: {
     duration: { control: { type: "range", min: 500, max: 6000, step: 100 } },
   },
@@ -84,5 +86,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** A host-owned rAF loop sampling the same timeline every frame. */
+/**
+ * The "Sample without playing" idea from
+ * [Getting Started](https://johnsonjo4531.github.io/keyframe-flow/docs/getting-started/)
+ * taken further: a Canvas driven entirely by the story's own
+ * `requestAnimationFrame` loop calling `animation.sampleProgress(p)` — no
+ * attach, no playback instance, no scheduler (§10.3). For hosts that already
+ * run a frame loop.
+ */
 export const ExternalLoop: Story = {};
