@@ -105,6 +105,10 @@ The docs now embed playable examples, but three gaps remain: markdown links with
 59. [x] Make Storybook examples mirror the documentation: create new stories that reproduce the guides' actual code snippets verbatim where no matching example exists (`guides-getting-started--first-animation`, `guides-getting-started--sample-without-playing` sampling the same `slide` definition, `guides-core-concepts--crane-vs-orbit` for composition order), align existing embedded stories' default values with their guide snippets (from/to, keyframes→bounce, generators orbit, combine tracks, slerp-vs-angular full revolution), replace the two unrelated getting-started embeds and the core-concepts embed with the new guide stories, give every story a substantive Docs description explaining what it demonstrates and linking its guide section, and update vanilla twins + gallery registry for any new/renamed ids.
 60. [x] Polish the examples gallery (`/keyframe-flow/examples/`): add a light/dark theme toggle in the header (persisted to localStorage, following `prefers-color-scheme` by default) applied via CSS custom properties across landing and example pages, and syntax-highlight all code panels (TypeScript + TSX sources) with a proper highlighter instead of plain `<pre>` text.
 
+## Milestone 12: LLM-Readable Documentation (llms.txt)
+
+61. [x] Publish machine-readable docs indexes for AI tools: enable clean-jsdoc-theme's `llmsTxt` option in `typedoc.json` so the docs build emits `llms.txt` (an llmstxt.org index — one section per sidebar group, each entry linking the page's companion Markdown) and `llms-full.txt` (all page bodies concatenated) at the docs root (`/keyframe-flow/docs/llms.txt`, `/keyframe-flow/docs/llms-full.txt`); verify both files list every guide and API page with absolute published-host URLs; link them in the documentation so people know they exist and how to use them — a short "AI & LLM tools" section in `docs/getting-started.md` explaining the llms.txt convention (hand the index to any model, or the full file when context budget allows) with links to both files, a note in `docs/contributing-docs.md` that new pages appear in the indexes automatically via their companion `.md`, and menu discoverability if the theme supports it cleanly.
+
 ## Phases
 
 ## Phase 1 — Math core and Matrix4
@@ -178,3 +182,7 @@ The docs now embed playable examples, but three gaps remain: markdown links with
 ## Phase 18 — Documentation-local links, guide-aligned examples & gallery polish
 
 - [x] Complete: T58, T59, T60
+
+## Phase 19 — LLM-readable documentation (llms.txt)
+
+- [x] Complete: T61

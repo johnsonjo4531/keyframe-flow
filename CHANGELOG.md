@@ -6,6 +6,25 @@ follows a keep-a-changelog style and the version numbers follow
 
 ## 0.0.0
 
+### Milestone 12 — LLM-Readable Documentation (T61)
+
+- Published the docs for AI tools via clean-jsdoc-theme's built-in
+  **llms.txt** support (`llmsTxt: true` in `typedoc.json`): every docs build
+  now emits `/keyframe-flow/docs/llms.txt` — an [llms.txt](https://llmstxt.org)
+  index with one section per sidebar group, each entry linking the page's
+  companion Markdown with its description (76 pages: all guides + API
+  references, absolute published-host URLs; source-viewer pages excluded) —
+  and `/keyframe-flow/docs/llms-full.txt`, every page body concatenated. Both
+  are generated from the same sources as the site, so they never drift, and
+  new pages join them automatically via their companion `.md`.
+- Linked them where people will look: a header **menu item** (bot icon) on
+  every docs page, a README documentation bullet, and a new reader-facing
+  **"AI & LLM tools"** section in Getting Started explaining the convention —
+  hand the index URL to any model for on-demand fetches, or the full file when
+  context budget allows; plus notes that every page ships its `index.md`
+  companion and copy / open-in-LLM actions. `docs/contributing-docs.md` gained
+  a maintainer section on how the indexes are produced.
+
 ### Milestone 11 — Documentation-Local Links, Guide-Aligned Examples & Gallery Polish (T58–T60)
 
 - **Local previews now stay local.** `docs/embed-host-rewrite.js` rewrites not

@@ -1,8 +1,21 @@
-feat: guide-aligned Storybook examples, local-preview link fixes, gallery polish
+feat: llms.txt docs indexes, guide-aligned Storybook examples, gallery polish
 
-Documentation and examples now tell one consistent story: every embedded
-example runs the code printed beside it, local previews stay on localhost, and
-the vanilla-TypeScript gallery gains theming and syntax highlighting.
+Documentation and examples now tell one consistent story — and both humans and
+AI models can read it: every embedded example runs the code printed beside it,
+local previews stay on localhost, the vanilla-TypeScript gallery gained theming
+and syntax highlighting, and the whole docs set publishes as llms.txt.
+
+LLM-readable documentation (T61):
+
+- Enabled clean-jsdoc-theme's `llmsTxt`: the docs build emits
+  `/keyframe-flow/docs/llms.txt` (llmstxt.org index — one section per sidebar
+  group, every guide + API page linked to its companion Markdown with a
+  description) and `llms-full.txt` (all bodies concatenated), generated from
+  the same sources as the site so they never drift.
+- Discoverability: pinned header menu item on every docs page, README bullet,
+  a reader-facing "AI & LLM tools" section in Getting Started explaining the
+  convention, and a maintainer note in contributing-docs.md (new pages join
+  the indexes automatically via their companion `.md`).
 
 Guide-aligned Storybook examples (T59):
 

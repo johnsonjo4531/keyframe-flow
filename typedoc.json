@@ -17,9 +17,19 @@
     "siteUrl": "https://johnsonjo4531.github.io",
     "docs": "docs",
     "docGroups": ["Getting Started", "Guides", "Project"],
+    // llmstxt.org indexes (T61): llms.txt lists every page (guides + API,
+    // with descriptions) linking its companion Markdown; llms-full.txt
+    // concatenates all bodies. Requires siteUrl above; source-file pages are
+    // never listed. https://johnsonjo4531.github.io/keyframe-flow/docs/llms.txt
+    "llmsTxt": true,
     "menu": [
       { "id": "home", "title": "Home" },
       { "title": "Storybook", "link": "/keyframe-flow/storybook/", "icon": "lucide:play-circle" },
+      {
+        "title": "llms.txt",
+        "link": "https://johnsonjo4531.github.io/keyframe-flow/docs/llms.txt",
+        "icon": "lucide:bot"
+      },
       {
         "title": "GitHub",
         "link": "https://github.com/johnsonjo4531/keyframe-flow",
