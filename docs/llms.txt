@@ -1,0 +1,221 @@
+# keyframe-flow
+
+> A animation-engine for web and Node.js. Define motion. Transform anything.
+
+Documentation for keyframe-flow. Every page below links to its Markdown source; the whole site as a single file is at https://johnsonjo4531.github.io/keyframe-flow/docs/llms-full.txt
+
+## Getting Started
+- [Getting Started](https://johnsonjo4531.github.io/keyframe-flow/docs/getting-started/index.md)
+
+## Guides
+- [Core Concepts & Coordinate Conventions](https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/index.md)
+- [Animation Authoring](https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/index.md)
+- [Easing & Interpolation](https://johnsonjo4531.github.io/keyframe-flow/docs/easing-interpolation/index.md)
+- [Playback & Lifecycle](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/index.md)
+- [Render Adapters & Custom Targets](https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/index.md)
+- [React Integration](https://johnsonjo4531.github.io/keyframe-flow/docs/react-integration/index.md)
+
+## Project
+- [Contributing Docs](https://johnsonjo4531.github.io/keyframe-flow/docs/contributing-docs/index.md)
+
+## AnimatedProperties
+- [AnimatedProperties](https://johnsonjo4531.github.io/keyframe-flow/docs/animatedproperties/index.md): Which transform properties an animation actually changes (§14).
+
+## Animation
+- [Animation](https://johnsonjo4531.github.io/keyframe-flow/docs/animation/index.md): An immutable, reusable animation definition (§5.1). Definitions describe motion; they are not playback instances and hold no execution state…
+
+## AnimationDefinition
+- [AnimationDefinition](https://johnsonjo4531.github.io/keyframe-flow/docs/animationdefinition/index.md): Any animation definition accepted by Animation.from() (§5.1).
+
+## AnimationFromToDefinition
+- [AnimationFromToDefinition](https://johnsonjo4531.github.io/keyframe-flow/docs/animationfromtodefinition/index.md): From/to definition (§5.2). from and to accept complete transforms or property-level partial objects (§7); unspecified properties are preserved from…
+
+## AnimationGroupOptions
+- [AnimationGroupOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/animationgroupoptions/index.md): Options for Animation.group .
+
+## AnimationInterpolation
+- [AnimationInterpolation](https://johnsonjo4531.github.io/keyframe-flow/docs/animationinterpolation/index.md): Interpolation strategy for animation sampling (§9). "trs" (default): property-aware interpolation — linear translation and scale, quaternion SLERP…
+
+## AnimationKeyframesDefinition
+- [AnimationKeyframesDefinition](https://johnsonjo4531.github.io/keyframe-flow/docs/animationkeyframesdefinition/index.md): Keyframe definition (§5.3, §5.4) with an eager keyframe source (§5.5).
+
+## AttachOptions
+- [AttachOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/attachoptions/index.md): Options accepted by Animation.attach (§11).
+
+## Canvas2DTargetOptions
+- [Canvas2DTargetOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/canvas2dtargetoptions/index.md): Options for canvas .
+
+## CanvasRenderingContext2DLike
+- [CanvasRenderingContext2DLike](https://johnsonjo4531.github.io/keyframe-flow/docs/canvasrenderingcontext2dlike/index.md): The structural subset of a Canvas 2D context the adapter needs — only setTransform is required, so mocks and offscreen contexts work too. No DOM lib…
+
+## Clock
+- [Clock](https://johnsonjo4531.github.io/keyframe-flow/docs/clock/index.md): A monotonic-ish time source returning milliseconds (§16). Clocks provide time; schedulers coordinate updates — scheduling is not timekeeping…
+
+## createFrameScheduler
+- [createFrameScheduler](https://johnsonjo4531.github.io/keyframe-flow/docs/createframescheduler/index.md): Creates the default frame scheduler (§16): requestAnimationFrame in browsers, timer-based scheduling elsewhere. Resolution happens at call time —…
+
+## CssTransformElementLike
+- [CssTransformElementLike](https://johnsonjo4531.github.io/keyframe-flow/docs/csstransformelementlike/index.md): The structural subset of an HTML element the adapter needs — any element with a CSS style.transform string works, and no DOM lib types are…
+
+## DOMMatrixLike
+- [DOMMatrixLike](https://johnsonjo4531.github.io/keyframe-flow/docs/dommatrixlike/index.md): The named members shared by DOMMatrixReadOnly and DOMMatrix . CSSOM member names are transposed relative to conventional mathematical m<row><column>…
+
+## DOMMatrixWritable
+- [DOMMatrixWritable](https://johnsonjo4531.github.io/keyframe-flow/docs/dommatrixwritable/index.md): A mutable DOMMatrix instance with the subset of members used here.
+
+## DOMPointInput
+- [DOMPointInput](https://johnsonjo4531.github.io/keyframe-flow/docs/dompointinput/index.md): Input point for DOMMatrixWritable#transformPoint .
+
+## DOMPointOutput
+- [DOMPointOutput](https://johnsonjo4531.github.io/keyframe-flow/docs/dompointoutput/index.md): Point produced by DOMMatrixWritable#transformPoint .
+
+## Easing
+- [Easing](https://johnsonjo4531.github.io/keyframe-flow/docs/easing/index.md): Any easing: a built-in name or a custom function. Custom easings need no global registration (§8).
+
+## EasingFunction
+- [EasingFunction](https://johnsonjo4531.github.io/keyframe-flow/docs/easingfunction/index.md): Custom easing function (§8): maps normalized progress in [0, 1] to an eased value. Values outside [0, 1] are permitted (overshoot) but must be…
+
+## EasingName
+- [EasingName](https://johnsonjo4531.github.io/keyframe-flow/docs/easingname/index.md): A built-in easing name such as "linear" or "ease-in-out-cubic" (§8).
+
+## EngineTickable
+- [EngineTickable](https://johnsonjo4531.github.io/keyframe-flow/docs/enginetickable/index.md): The minimal contract the engine needs from a playback instance. Playback instances implement it; keeping it structural avoids a runtime import cycle…
+
+## EulerAngles
+- [EulerAngles](https://johnsonjo4531.github.io/keyframe-flow/docs/eulerangles/index.md): Euler angle triples in radians, X → Y → Z (§4.3).
+
+## getDefaultEngine
+- [getDefaultEngine](https://johnsonjo4531.github.io/keyframe-flow/docs/getdefaultengine/index.md): The lazily created shared PlaybackEngine used by playbacks that do not inject their own. It combines systemClock with the default frame scheduler (…
+
+## GroupLayout
+- [GroupLayout](https://johnsonjo4531.github.io/keyframe-flow/docs/grouplayout/index.md): Layout modes for Animation.group (§14, §19).
+
+## HtmlTargetOptions
+- [HtmlTargetOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/htmltargetoptions/index.md): Options for html .
+
+## Keyframe
+- [Keyframe](https://johnsonjo4531.github.io/keyframe-flow/docs/keyframe/index.md): A generic keyframe: a value attached to a normalized position (§6.1). at is progress in [0, 1] , independent of duration (§6.2).
+
+## ManualClock
+- [ManualClock](https://johnsonjo4531.github.io/keyframe-flow/docs/manualclock/index.md): A clock whose time only moves when a test or host says so (§16). Ideal for deterministic playback tests: animation time is timestamp-based, never…
+
+## ManualScheduler
+- [ManualScheduler](https://johnsonjo4531.github.io/keyframe-flow/docs/manualscheduler/index.md): A scheduler that only fires frames when a test or host calls ManualScheduler.tick (§16). Pair it with ManualClock for fully deterministic playback…
+
+## matrix
+- [matrix](https://johnsonjo4531.github.io/keyframe-flow/docs/matrix/index.md): Portable matrix entry points (§15). const a = matrix.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 10, 0, 0, 1]); const b = matrix.from(domMatrix);…
+
+## Matrix4
+- [Matrix4](https://johnsonjo4531.github.io/keyframe-flow/docs/matrix4/index.md): The library's portable, canonical 4×4 matrix (§3.4, §15). Conventions (§4.4): right-handed coordinates, column vectors, column-major storage,…
+
+## MatrixSource
+- [MatrixSource](https://johnsonjo4531.github.io/keyframe-flow/docs/matrixsource/index.md): Sources accepted by matrix.from() .
+
+## matrixToCssTransform
+- [matrixToCssTransform](https://johnsonjo4531.github.io/keyframe-flow/docs/matrixtocsstransform/index.md): Converts a Matrix4 to a CSS matrix3d() value (§17). CSS lists all sixteen matrix elements in column-major order — exactly this library's storage…
+
+## matrixToSvgTransform
+- [matrixToSvgTransform](https://johnsonjo4531.github.io/keyframe-flow/docs/matrixtosvgtransform/index.md): Converts a Matrix4 to an SVG 1.1 matrix(a, b, c, d, e, f) transform value (§17). SVG's 2D affine form maps to the matrix's column vectors as a =…
+
+## NormalizedKeyframe
+- [NormalizedKeyframe](https://johnsonjo4531.github.io/keyframe-flow/docs/normalizedkeyframe/index.md): A keyframe after eager normalization (§5.5): transforms are coerced to Transform instances and named easings are resolved to functions once, so…
+
+## Playback
+- [Playback](https://johnsonjo4531.github.io/keyframe-flow/docs/playback/index.md): An independent playback instance created by Animation.attach (§11). Definitions describe motion; playback instances execute it (Appendix B.1): every…
+
+## PlaybackCancelledResult
+- [PlaybackCancelledResult](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackcancelledresult/index.md): The run was cancelled (superseded, cancel() , or disposal) before finishing (§12).
+
+## PlaybackDirectionMode
+- [PlaybackDirectionMode](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackdirectionmode/index.md): How playback direction behaves between iterations (§13). alternate and alternate-reverse flip direction every iteration; normal and reverse keep one…
+
+## PlaybackEngine
+- [PlaybackEngine](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackengine/index.md): The centralized playback scheduler (§16). One engine drives all active playback instances: it reads the current time from its injectable Clock ,…
+
+## PlaybackEngineOptions
+- [PlaybackEngineOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackengineoptions/index.md): Injectable time sources for a PlaybackEngine (§16).
+
+## PlaybackFinishedResult
+- [PlaybackFinishedResult](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackfinishedresult/index.md): The run reached its natural end (§12).
+
+## PlaybackOptions
+- [PlaybackOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackoptions/index.md): Construction options for Animation.attach / Playback .
+
+## PlaybackResult
+- [PlaybackResult](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackresult/index.md): Outcome delivered by the finished promise of a playback run (§12).
+
+## PlaybackState
+- [PlaybackState](https://johnsonjo4531.github.io/keyframe-flow/docs/playbackstate/index.md): The lifecycle states of a playback instance (§12).
+
+## projectToCanvas2D
+- [projectToCanvas2D](https://johnsonjo4531.github.io/keyframe-flow/docs/projecttocanvas2d/index.md): Projects a Matrix4 into Canvas 2D's affine form (§17.3). Canvas 2D is an inherently 2D affine API: the required projection step maps the transformed…
+
+## Quaternion
+- [Quaternion](https://johnsonjo4531.github.io/keyframe-flow/docs/quaternion/index.md): An immutable unit-friendly quaternion used as the library's internal rotation representation (§4.3). Components follow the Hamilton convention (x,…
+
+## QuaternionLike
+- [QuaternionLike](https://johnsonjo4531.github.io/keyframe-flow/docs/quaternionlike/index.md): Any value that can be read as a quaternion {x, y, z, w} (§4.3).
+
+## QuaternionObject
+- [QuaternionObject](https://johnsonjo4531.github.io/keyframe-flow/docs/quaternionobject/index.md): Any value that can be read as a quaternion {x, y, z, w} (§4.3).
+
+## RenderTarget
+- [RenderTarget](https://johnsonjo4531.github.io/keyframe-flow/docs/rendertarget/index.md): The structural render target interface (§17.1). Any object with a setTransform method is a valid target — custom rendering systems do not need to…
+
+## RotationMode
+- [RotationMode](https://johnsonjo4531.github.io/keyframe-flow/docs/rotationmode/index.md): How rotation interpolates between keyframes (§9.1). "quaternion" (default): SLERP with shortest-path — the correct choice for orientations, but…
+
+## Scheduler
+- [Scheduler](https://johnsonjo4531.github.io/keyframe-flow/docs/scheduler/index.md): A frame callback source (§16). One request schedules exactly one callback invocation — the same contract as requestAnimationFrame — and cancel…
+
+## SvgTransformElementLike
+- [SvgTransformElementLike](https://johnsonjo4531.github.io/keyframe-flow/docs/svgtransformelementlike/index.md): The structural subset of an SVG element the adapter needs — anything with setAttribute works (SVG 1.1 transform attributes), no DOM lib types.
+
+## systemClock
+- [systemClock](https://johnsonjo4531.github.io/keyframe-flow/docs/systemclock/index.md): The default clock: performance.now() when available, otherwise Date.now() . Works unchanged in browsers and Node.js with no browser-API dependency…
+
+## target
+- [target](https://johnsonjo4531.github.io/keyframe-flow/docs/target/index.md): Built-in render target factories (§17). spin.attach(target.html(element)).play(); spin.attach(target.svg(gElement)).play();…
+
+## Transform
+- [Transform](https://johnsonjo4531.github.io/keyframe-flow/docs/transform/index.md): An immutable transform with the canonical component representation { position, rotation: Quaternion, scale } (§4.3), available as the frozen…
+
+## TransformComponents
+- [TransformComponents](https://johnsonjo4531.github.io/keyframe-flow/docs/transformcomponents/index.md): The canonical component representation of a transform (§4.3): position, quaternion rotation, and scale. Shared by the transform and matrix…
+
+## TransformComponentsInit
+- [TransformComponentsInit](https://johnsonjo4531.github.io/keyframe-flow/docs/transformcomponentsinit/index.md): Canonical construction input; omitted (or undefined) parts default to identity.
+
+## TransformInit
+- [TransformInit](https://johnsonjo4531.github.io/keyframe-flow/docs/transforminit/index.md): Developer-facing construction input (§4.1). Rotation may be given as a quaternion or as Euler angles in radians [x, y, z] — the convenience…
+
+## TransformKeyframe
+- [TransformKeyframe](https://johnsonjo4531.github.io/keyframe-flow/docs/transformkeyframe/index.md): A transform keyframe as authored (§6.1). easing controls the interpolation from this keyframe to the next one (§8); it is omitted on the final…
+
+## TransformKeyframeSource
+- [TransformKeyframeSource](https://johnsonjo4531.github.io/keyframe-flow/docs/transformkeyframesource/index.md): Sources accepted for keyframes definitions (§5.4): arrays, synchronous iterables, generator instances, and functions returning synchronous…
+
+## Vector3
+- [Vector3](https://johnsonjo4531.github.io/keyframe-flow/docs/vector3/index.md): An immutable 3D vector in the library's right-handed coordinate system (§4.4). All operations return new vectors; instances are never mutated (§4.2).
+
+## Vector3Like
+- [Vector3Like](https://johnsonjo4531.github.io/keyframe-flow/docs/vector3like/index.md): Any value that can be read as a 3D vector: an Vector3Object , or a [x, y, z] tuple (§4).
+
+## Vector3Object
+- [Vector3Object](https://johnsonjo4531.github.io/keyframe-flow/docs/vector3object/index.md): Any {x, y, z} object readable as a 3D vector — the structural form of Vector3Like .
+
+## WebGLRenderTarget
+- [WebGLRenderTarget](https://johnsonjo4531.github.io/keyframe-flow/docs/webglrendertarget/index.md): WebGL render target adapter (§3.6, §20 M5).
+
+## WebGLRenderTargetOptions
+- [WebGLRenderTargetOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/webglrendertargetoptions/index.md): Options for webgl .
+
+## WebGPURenderTarget
+- [WebGPURenderTarget](https://johnsonjo4531.github.io/keyframe-flow/docs/webgpurendertarget/index.md): WebGPU render target adapter (§3.6, §20 M5).
+
+## WebGPURenderTargetOptions
+- [WebGPURenderTargetOptions](https://johnsonjo4531.github.io/keyframe-flow/docs/webgpurendertargetoptions/index.md): Options for webgpu .
+
+## Optional
+- [Full documentation, single file](https://johnsonjo4531.github.io/keyframe-flow/docs/llms-full.txt): every page concatenated for one-shot ingestion
+- [Site home](https://johnsonjo4531.github.io/keyframe-flow/docs/): the rendered documentation site

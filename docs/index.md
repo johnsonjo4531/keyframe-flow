@@ -55,6 +55,7 @@ const matrix = halfway.toMatrix(); // Matrix4, column-major storage
 ## Documentation
 
 - **[Documentation site](https://johnsonjo4531.github.io/keyframe-flow/docs/)** — guides and the full API reference.
+- **[llms.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms.txt) / [llms-full.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms-full.txt)** — the whole documentation set for AI tools ([llms.txt](https://llmstxt.org) convention): a page-by-page index, or every page in one file.
 - **[Live examples (Storybook)](https://johnsonjo4531.github.io/keyframe-flow/storybook/)** — every feature running in the browser.
 
 Guides in this repository live under `docs/`:

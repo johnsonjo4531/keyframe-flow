@@ -85,6 +85,15 @@ The live example below samples the very same `slide` definition from its time in
 
 Keeping these separate is what makes definitions shareable across playbacks and targets swappable without touching animation code (Appendix B.1).
 
+## AI & LLM tools
+
+The whole documentation site is published in machine-readable form, following the [llms.txt](https://llmstxt.org) convention:
+
+- **[llms.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms.txt)** — a compact index of every guide and API page with one-line descriptions, each linking to the page's raw Markdown. Hand this URL (or file) to any AI tool; it lets the model fetch exactly the pages it needs.
+- **[llms-full.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms-full.txt)** — every page's full content concatenated into one file, for tools that work best with everything up front instead of on demand.
+
+Both files are generated from the same sources as this site on every docs build, so they never drift. Every individual page also ships its Markdown companion (append `index.md` to any page URL) and offers copy / open-in-ChatGPT / open-in-Claude actions at the top of the page.
+
 ## What to read next
 
 - [Core concepts & coordinate conventions](../core-concepts/) — the math contract: handedness, column vectors, Euler order, composition order.

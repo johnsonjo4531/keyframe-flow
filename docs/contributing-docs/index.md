@@ -118,10 +118,16 @@ Stories live in `examples/stories/` and mount a real keyframe-flow animation int
 
 The Code panel is enabled globally (`parameters.docs.codePanel: true` in `.storybook/preview.tsx`, backed by the `@storybook/addon-docs` addon) so each story shows its source next to the canvas. Storybook's auto-generated snippet collapses to a minified `<l …/>` tag in production builds, so an `enforce: "pre"` Vite plugin (`injectStorySourcePlugin` in `.storybook/main.ts`) appends each story file's verbatim TSX into `meta.parameters.docs.source.code`. If you add a new story file, keep the `const meta = …; export default meta;` shape — that is what the plugin looks for.
 
+## LLM-friendly indexes (llms.txt)
+
+The theme publishes the docs for AI tools automatically (`llmsTxt: true` in `typedoc.json`, which requires `siteUrl`): every build emits `llms.txt` — an [llms.txt](https://llmstxt.org) index, one section per sidebar group, each entry linking the page's companion Markdown with its description — and `llms-full.txt`, all page bodies concatenated. Both land at the docs root (`/keyframe-flow/docs/llms.txt`) and are linked from the header menu, the README, and the Getting Started guide.
+
+Contributors get this for free: every content page already ships a companion `index.md` beside its HTML (append `index.md` to any page URL), and new guides or API pages appear in both indexes automatically — grouped by their sidebar group (`group:` frontmatter / `@category`). Source-file viewer pages are never listed. If the site ever gains locales, each locale gets its own files.
+
 ## Deploy
 
 ```sh
 make github_pages_deploy
 ```
 
-Builds docs and Storybook into `site/`, stages the landing page + `.nojekyll`, and publishes `site/` to the `gh-pages` branch via `gh-pages`. The workflow is purely Makefile-driven — no CI file needed for now.
+Builds docs, Storybook, and the examples gallery into `site/`, stages the landing page + `.nojekyll`, and publishes `site/` to the `gh-pages` branch via `gh-pages`. The workflow is purely Makefile-driven — no CI file needed for now.

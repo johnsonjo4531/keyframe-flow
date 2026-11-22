@@ -1,0 +1,4907 @@
+# keyframe-flow — full documentation
+
+> A animation-engine for web and Node.js. Define motion. Transform anything.
+
+Generated from https://johnsonjo4531.github.io/keyframe-flow/docs/ . This file concatenates every documentation page.
+
+---
+
+# keyframe-flow
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/
+
+**Define motion. Transform anything.**
+
+keyframe-flow is a platform-independent transform and animation library for web and Node.js. It gives you a mathematically rigorous, immutable transform model, an expressive animation-definition layer, and a deterministic playback engine — with rendering delegated entirely to structural adapters you can implement yourself in three lines.
+
+The core never touches browser APIs, so the same animation code runs in a browser, in Node.js, in workers, or on a server. Interoperability with native platform matrices happens through explicit conversions that preserve mathematical meaning, never raw element copies.
+
+## Why keyframe-flow
+
+- **Portable by construction** — zero DOM/`window` dependencies in the core; runs in plain Node.js (§2 principle 1 of the design docs).
+- **One coordinate convention, stated explicitly** — right-handed, column vectors, intrinsic `X → Y → Z` Euler order in radians, column-major matrix storage. See [Core concepts & coordinate conventions](https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/).
+- **Definitions are not playback** — an `Animation` is an immutable, reusable description; every `attach()` yields an independent `Playback` instance with its own time and lifecycle.
+- **Manual sampling is first-class** — drive your own render loop with `animation.sample(ms)` / `sampleProgress(p)`; no scheduler required.
+- **Composable motion** — property-level composition, groups, nested timelines, full-revolution rotation tracks, and easing built in.
+- **Adapters, not frameworks** — HTML, SVG, Canvas 2D, WebGL, and WebGPU ship as adapters; any object with `setTransform(matrix)` is a valid render target.
+
+## Install
+
+```sh
+npm install keyframe-flow
+```
+
+## Quick start
+
+```ts
+import { Animation, transform, target } from "keyframe-flow";
+
+// Define motion once — immutable and reusable.
+const slide = Animation.from({
+  from: transform(),
+  to: transform().translate(100, 50),
+  duration: 800,
+  easing: "ease-out-cubic",
+});
+
+// Play it on any render target — here a DOM element.
+const playback = slide.attach(target.html(document.querySelector(".box")!));
+playback.play();
+await playback.finished; // resolves { status: "finished" } once complete
+```
+
+The same definition can be sampled manually with no scheduler or target at all:
+
+```ts
+const halfway = slide.sample(400); // Transform at t = 400 ms
+const matrix = halfway.toMatrix(); // Matrix4, column-major storage
+```
+
+## Documentation
+
+- **[Documentation site](https://johnsonjo4531.github.io/keyframe-flow/docs/)** — guides and the full API reference.
+- **[llms.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms.txt) / [llms-full.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms-full.txt)** — the whole documentation set for AI tools ([llms.txt](https://llmstxt.org) convention): a page-by-page index, or every page in one file.
+- **[Live examples (Storybook)](https://johnsonjo4531.github.io/keyframe-flow/storybook/)** — every feature running in the browser.
+
+Guides in this repository live under `docs/`:
+
+| Guide                                                                                                       | Covers                                                     |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [Getting started](https://johnsonjo4531.github.io/keyframe-flow/docs/getting-started/)                      | Install, first animation, mental model                     |
+| [Core concepts & coordinate conventions](https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/) | Handedness, column vectors, Euler order, composition order |
+| [Animation authoring](https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/)              | From/to, property-level, keyframes, generators             |
+| [Easing & interpolation](https://johnsonjo4531.github.io/keyframe-flow/docs/easing-interpolation/)          | Named easings, custom curves, SLERP, angular tracks        |
+| [Playback & lifecycle](https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/)              | States, rates, repetition, promises, disposal              |
+| [Render adapters & custom targets](https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/)     | HTML/SVG/Canvas/WebGL/WebGPU, structural targets           |
+| [Contributing docs](https://johnsonjo4531.github.io/keyframe-flow/docs/contributing-docs/)                  | The documentation pipeline itself                          |
+
+Internal design rationale lives in [`design-docs/vision.md`](https://github.com/johnsonjo4531/keyframe-flow/blob/main/design-docs/vision.md) — the source of truth the guides above link to rather than duplicate.
+
+## Status
+
+keyframe-flow is pre-1.0. The public API follows semantic versioning from `0.0.0`; see [CHANGELOG.md](https://github.com/johnsonjo4531/keyframe-flow/blob/main/CHANGELOG.md).
+
+## License
+
+MIT © johnsonjo4531
+
+---
+
+# Getting Started
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/getting-started/
+
+keyframe-flow lets you describe motion once and replay it anywhere — in a browser, in Node.js, or in your own render loop. This guide takes you from an empty project to a running animation.
+
+<Callout type="info">
+  The internal design rationale lives in the [vision document](https://github.com/johnsonjo4531/keyframe-flow/blob/main/design-docs/vision.md). Guides here link to its sections (like §5) rather than duplicating them.
+</Callout>
+
+## Install
+
+```sh
+npm install keyframe-flow
+```
+
+The package ships ES modules with bundled type definitions. There is no browser-only entry point — the same import works in Node.js.
+
+## Your first animation
+
+An animation has three parts: a **definition** (what moves), a **playback** (when and how it plays), and an optional **render target** (where it appears).
+
+```ts
+import { Animation, transform, target } from "keyframe-flow";
+
+// 1. A definition — immutable, reusable, no execution state.
+const slide = Animation.from({
+  from: transform(), // identity: position (0,0,0), no rotation, scale 1
+  to: transform().translate(100, 50), // move +100 x, +50 y
+  duration: 800, // milliseconds
+  easing: "ease-out-cubic",
+});
+
+// 2. A playback — an independent instance with its own time and lifecycle.
+const box = document.querySelector(".box")!;
+const playback = slide.attach(target.html(box));
+
+// 3. Drive it.
+playback.play();
+await playback.finished; // { status: "finished" } — never rejects
+```
+
+`target.html(element)` writes CSS `matrix3d()` transforms onto the element. Swap in `target.svg(gElement)`, `target.canvas(ctx2d)`, or your own object — see [Render adapters & custom targets](../render-adapters/).
+
+The example below is live — press play, pause, reset, and reverse right here:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=guides-getting-started--first-animation" title="Live demo — the snippet above, running: definition + playback + HTML target" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/guides-getting-started--first-animation)
+
+The embed runs exactly the code above — press play, pause, reset, and reverse right here. [Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/guides-getting-started--first-animation) shows the same example with its full source and explanation.
+
+## Sample without playing
+
+Manual sampling is first-class: definitions can be evaluated at any time with no scheduler, no playback instance, and no render target (§10). This is the hook for hosts that already run their own frame loop.
+
+```ts
+const halfway = slide.sample(400); // Transform at t = 400 ms
+const normalized = slide.sampleProgress(0.5); // same transform — 0.5 of 800 ms
+const matrix = halfway.toMatrix(); // Matrix4 for your own upload path
+```
+
+`sample(ms)` and `sampleProgress(p)` evaluate the identical timeline; inputs outside `[0, duration]` or `[0, 1]` clamp to the boundaries.
+
+The live example below samples the very same `slide` definition from its time in an external `requestAnimationFrame` loop that calls `slide.sample(t)` itself — the library runs no playback at all:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=guides-getting-started--sample-without-playing" title="Live demo — the same slide definition, sampled by a host rAF loop" height="420" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/guides-getting-started--sample-without-playing)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/guides-getting-started--sample-without-playing) for the full source of the host loop.
+
+## The three-object model
+
+| Object        | Role                                           | Mutable?                             | Reusable?                                                 |
+| ------------- | ---------------------------------------------- | ------------------------------------ | --------------------------------------------------------- |
+| `Animation`   | Describes motion (keyframes, duration, easing) | No — frozen after `Animation.from()` | Yes — attach as many playbacks as you like                |
+| `Playback`    | Executes one run: time, direction, rate, state | Yes — its own execution state        | One lifecycle; create a new instance to restart cleanly   |
+| Render target | Receives evaluated `Matrix4` values            | Host-owned                           | Yes — the latest playback owns it (replacement semantics) |
+
+Keeping these separate is what makes definitions shareable across playbacks and targets swappable without touching animation code (Appendix B.1).
+
+## AI & LLM tools
+
+The whole documentation site is published in machine-readable form, following the [llms.txt](https://llmstxt.org) convention:
+
+- **[llms.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms.txt)** — a compact index of every guide and API page with one-line descriptions, each linking to the page's raw Markdown. Hand this URL (or file) to any AI tool; it lets the model fetch exactly the pages it needs.
+- **[llms-full.txt](https://johnsonjo4531.github.io/keyframe-flow/docs/llms-full.txt)** — every page's full content concatenated into one file, for tools that work best with everything up front instead of on demand.
+
+Both files are generated from the same sources as this site on every docs build, so they never drift. Every individual page also ships its Markdown companion (append `index.md` to any page URL) and offers copy / open-in-ChatGPT / open-in-Claude actions at the top of the page.
+
+## What to read next
+
+- [Core concepts & coordinate conventions](../core-concepts/) — the math contract: handedness, column vectors, Euler order, composition order.
+- [Animation authoring](../animation-authoring/) — from/to, property-level, keyframes, and generator sources.
+- [Easing & interpolation](../easing-interpolation/) — named easings, custom curves, SLERP, and full-revolution rotation tracks.
+- [Playback & lifecycle](../playback-lifecycle/) — the full state machine, rates, repetition, and disposal.
+- [Render adapters & custom targets](../render-adapters/) — HTML, SVG, Canvas, WebGL, WebGPU, and rolling your own.
+- [React Integration](../react-integration/) — `useKeyframePlayback` and `<Animated>` from the `keyframe-flow/react` subpath.
+
+Live versions of every example run in the [Storybook examples](../../storybook/).
+
+---
+
+# Core Concepts & Coordinate Conventions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/core-concepts/
+
+keyframe-flow's value comes from stating one coordinate convention and never breaking it. This page is the contract (§4, §15); violations are impossible rather than merely discouraged, because every operation that could introduce ambiguity throws explicitly.
+
+## One convention, stated in full
+
+| Aspect          | Choice                                             |
+| --------------- | -------------------------------------------------- |
+| Handedness      | Right-handed                                       |
+| Vectors         | Column vectors — matrices act as `M · v`           |
+| Euler order     | Intrinsic `X → Y → Z`, radians only                |
+| TRS composition | `M = T × R × S` (scale applied first to the point) |
+| Matrix storage  | Column-major (`Float64Array[16]`)                  |
+| Angle units     | Radians everywhere — degrees are never accepted    |
+
+Because this is fixed, two transforms produced by different parts of your codebase always compose correctly, and matrices can cross the browser/Node boundary without silent reinterpretation.
+
+## Right-handedness and column vectors
+
+Vectors are columns; a matrix maps them by left-multiplication: `v' = M · v`. The three basis images live in the first three columns of `M`:
+
+```ts
+import { matrix, Quaternion } from "keyframe-flow";
+
+const m = matrix.fromTRS({
+  position: [10, 20, 30],
+  rotation: Quaternion.identity(),
+});
+// Column-major storage: translation lives at indices 12–14 (§15).
+m.el(12); // 10 — the x translation
+```
+
+This layout is exactly what WebGL's `gl.uniformMatrix4fv` and WGSL's `mat4x4<f32>` consume, and it maps onto CSS/DOMMatrix without transposition.
+
+## Euler angles are intrinsic X → Y → Z, in radians
+
+```ts
+import { Quaternion } from "keyframe-flow";
+
+// Equivalent to Rx · Ry · Rz — applied right-to-left to a point:
+// first roll about Z, then pitch about Y, then yaw about X.
+const q = Quaternion.fromEuler(xAngle, yAngle, zAngle);
+```
+
+Degrees are rejected structurally: there is no API surface that accepts them, so a degrees/radians mix-up cannot occur silently (§4.3).
+
+## Composition order — the rule that prevents 90% of bugs
+
+Transform composition follows the parent-to-child reading `M_world = M_parent × M_local` (§4.4). The fluent API applies operations as **local-space** operations in call order, i.e. each call does `M ← M × Op`:
+
+```ts
+import { transform } from "keyframe-flow";
+
+// Translate first, THEN rotate — the rotation happens about the object's
+// (now displaced) local origin, like a crane arm swinging after extending.
+const crane = transform()
+  .translate(100, 0)
+  .rotateZ(Math.PI / 2);
+
+// Rotating before translating orbits the original origin instead.
+const orbit = transform()
+  .rotateZ(Math.PI / 2)
+  .translate(100, 0);
+```
+
+The demo below runs both snippets from above side by side: each box animates from identity to its composed result, so where they end up shows exactly how the call order changes the product `M = T × R × S`.
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=guides-core-concepts--crane-vs-orbit" title="Live demo — crane vs orbit: the same operations, opposite order" height="380" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/guides-core-concepts--crane-vs-orbit)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/guides-core-concepts--crane-vs-orbit) for the two definitions side by side with explanations.
+
+For operations expressed in the parent (world) frame, use the `world*` variants — `worldTranslate`, `worldRotateX/Y/Z`, `worldRotate` — which apply in the parent frame rather than the local one.
+
+## Immutability everywhere
+
+Every operation returns a new value; nothing mutates in place (§4.2). Transforms are frozen, so shared definitions can be handed to any number of playbacks without defensive copies or aliasing surprises. Negative scale is rejected at construction — mirror geometry is expressed with rotation or an explicit matrix instead, keeping decompositions unambiguous.
+
+## Explicit throws over silent approximations
+
+Decomposition (matrix → position/rotation/scale) only succeeds for matrices that are TRS-decomposable. Unsupported inputs throw rather than guessing:
+
+- shear
+- reflection (negative determinant scale)
+- perspective rows
+- singular matrices (§9.2, §15.1)
+
+The same philosophy governs interpolation: raw element-wise matrix averaging is never the default, and opting into it ([Easing & interpolation](../easing-interpolation/#raw-matrix-interpolation)) still throws when a midpoint is not decomposable.
+
+## Native matrix interop
+
+Conversions to and from platform matrices preserve **mathematical meaning**, not raw element order (§15.2). `DOMMatrix` named members follow the CSSOM `m<column><row>` convention, which aligns with column-major storage:
+
+```ts
+const mine = Matrix4.fromDOMMatrix(native); // reads m11…m44 by name
+const back = mine.toDOMMatrix(); // native DOMMatrix when available
+```
+
+The core itself imports nothing browser-specific — `Matrix4.fromDOMMatrix` accepts any object with the named members, structurally (§2 principle 1).
+
+## See also
+
+- API reference: [`Transform`](../transform/), [`Matrix4`](../matrix4/), [`Quaternion`](../quaternion/)
+- [Animation authoring](../animation-authoring/) — building on these types
+- [Render adapters](../render-adapters/) — how the conventions surface in CSS, SVG, and GPU upload paths
+
+---
+
+# Animation Authoring
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animation-authoring/
+
+`Animation.from()` accepts several definition styles — they all produce the same immutable, normalized timeline (§5). An `Animation` is a description: it holds no execution state, so one definition can back any number of playback instances and sampling calls.
+
+## From/to definitions
+
+The simplest shape gives an explicit start and end transform over a duration in milliseconds (§5.2):
+
+```ts
+const fadeUp = Animation.from({
+  from: transform().translate(0, 20),
+  to: transform(),
+  duration: 300,
+});
+```
+
+Durations must be finite and non-negative; `duration: 0` is legal and renders the terminal value immediately (§6.2).
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=authoring-from-to--fade-up" title="Live demo — the fadeUp snippet above, running" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/authoring-from-to--fade-up)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/authoring-from-to--fade-up) to change the duration.
+
+## Property-level definitions
+
+You rarely need a full transform on both ends — specify only the properties that change, and everything else is preserved from the start (or from documented identity defaults when `from` is omitted) (§7):
+
+```ts
+// Rotates 90° about Z while x slides 0 → 100; y/z and scale stay put.
+const slideTurn = Animation.from({
+  from: { position: [0, 40, 0], rotation: [0, 0, 0] }, // Euler radians (§4.3)
+  to: { position: [100, 40, 0], rotation: [0, 0, Math.PI / 2] },
+  duration: 600,
+});
+
+// No `from` at all: starts from identity.
+const grow = Animation.from({ to: { scale: 1.5 }, duration: 250 });
+```
+
+The live example scales only — position and rotation are untouched, exactly the property-track behavior described above:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=authoring-property-level--scale-only" title="Live demo — property-level scale-only animation" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/authoring-property-level--scale-only)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/authoring-property-level--scale-only) for the full source.
+
+## Keyframe definitions
+
+Explicit keyframes use **normalized** timestamps in `[0, 1]` — they are fractions of the timeline, independent of `duration` (§6.1). Re-timing an animation never requires rewriting its keyframes:
+
+```ts
+const bounce = Animation.from({
+  duration: 1200,
+  keyframes: [
+    { at: 0, transform: transform().translate(0, -100) },
+    { at: 0.6, transform: transform() },
+    { at: 0.75, transform: transform().translate(0, -30) },
+    { at: 0.9, transform: transform() },
+    { at: 1, transform: transform() },
+  ],
+});
+```
+
+Validation is eager and strict (§6.3): timestamps must be finite, in `[0, 1]`, and **strictly increasing** — duplicates or out-of-order entries throw at `Animation.from()` time rather than being silently reordered. An empty source throws; a single keyframe produces a constant animation.
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=authoring-keyframes--bounce" title="Live demo — the bounce keyframes above, running" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/authoring-keyframes--bounce)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/authoring-keyframes--bounce) to see the five authored keyframes.
+
+## Generators and iterables
+
+Any synchronous iterable works as a keyframe source — arrays, `Map`s, generator functions, generator instances (§5.3–§5.5). The source is consumed **eagerly and exactly once**, when `Animation.from()` runs; the normalized timeline is frozen and shared thereafter:
+
+```ts
+function* orbitKeyframes(count: number) {
+  for (let i = 0; i <= count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    yield {
+      at: i / count,
+      transform: transform().translate(Math.cos(angle) * 80, Math.sin(angle) * 80),
+    };
+  }
+}
+
+const orbit = Animation.from({
+  duration: 4000,
+  keyframes: orbitKeyframes(24), // runs once, here — not during playback
+});
+```
+
+Asynchronous iterables are rejected explicitly: normalization must complete synchronously so sampling is always available and deterministic.
+
+The orbit below is generated from a generator function — 24 keyframes laid out on a circle, normalized once at definition time:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=authoring-generator-source--orbit" title="Live demo — generator-produced orbit" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/authoring-generator-source--orbit)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/authoring-generator-source--orbit) to read the generator function.
+
+## Composition: combine and group
+
+Independent animations can be composed instead of hand-authoring one big timeline (§14). `Animation.combine` merges by **property track**: each input only overrides the properties it actually animates, later inputs win overlaps, and shorter inputs hold their final value after completing.
+
+```ts
+const move = Animation.from({ to: { position: [200, 0, 0] }, duration: 1000 });
+const spin = Animation.from({ to: { rotation: [0, Math.PI, 0] }, duration: 1000 });
+const pulse = Animation.from({ to: { scale: 1.4 }, duration: 500 });
+
+// One animation that moves AND turns AND pulses — no merged keyframes needed.
+const composed = Animation.combine([move, spin, pulse]);
+```
+
+`Animation.group` builds timelines: children play **back to back** by default (sequence), or simultaneously with the same property-merge semantics as combine (`layout: "parallel"`). Groups are ordinary `Animation` values, so they nest freely (§14, §19):
+
+```ts
+const entrance = Animation.group([move, spin]); // one after the other
+const scene = Animation.group([entrance, pulse]); // groups inside groups
+```
+
+Below, `combine` merges a move, a turn, and a pulse into one animation — every property animates at once without any merged keyframes:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=authoring-composition--combine-tracks" title="Live demo — combined move + spin + pulse tracks" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/authoring-composition--combine-tracks)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/authoring-composition--combine-tracks) for the three input animations.
+
+## What to read next
+
+- [Easing & interpolation](../easing-interpolation/) — how values move _between_ keyframes.
+- [Playback & lifecycle](../playback-lifecycle/) — running definitions.
+- [React Integration](../react-integration/) — `useKeyframePlayback` and `<Animated>` for component apps.
+
+Live versions of every style run in the [Storybook examples](../../storybook/).
+
+---
+
+# Easing & Interpolation
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/easing-interpolation/
+
+Easing controls _when_ values arrive; interpolation controls _how_ they move between keyframes. Both are chosen at definition time and evaluated deterministically (§8, §9).
+
+## Named easings
+
+Twenty-six built-ins cover the common curves — `linear`, the CSS keyword family (`ease`, `ease-in`, `ease-out`, `ease-in-out`), and sine/quad/cubic/ quart/quint/expo/circ in each of `in` / `out` / `in-out`:
+
+```ts
+Animation.from({
+  from: transform(),
+  to: transform().translate(200, 0),
+  duration: 500,
+  easing: "ease-out-quart",
+});
+```
+
+<Callout type="tip">
+  Names are validated eagerly — an unknown easing name throws at `Animation.from()`, not during playback.
+</Callout>
+
+The gallery below plots the progress curve of one named easing; pick any of the 26 with the **easing** control:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=easing-easing-gallery--curves" title="Live demo — easing curve gallery" height="380" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/easing-easing-gallery--curves)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/easing-easing-gallery--curves) to switch between all 26 curves.
+
+## Custom easings
+
+Any `(progress: number) => number` function works with no registration step (§8). Inputs and outputs are normalized progress in `[0, 1]`; the function must return finite numbers (non-finite results throw at sampling time):
+
+```ts
+const overshoot = (t: number): number => {
+  const c = 1.70158;
+  const u = t - 1;
+  return u * u * ((c + 1) * u + c) + 1; // easeOutBack
+};
+
+const from = transform();
+const to = transform().translate(200, 0);
+
+Animation.from({ from, to, duration: 400, easing: overshoot });
+```
+
+## Per-keyframe segment easing
+
+The animation-level `easing` is the **default**. A keyframe may carry its own `easing`, which then controls interpolation _from that keyframe to the next_ (§8):
+
+```ts
+Animation.from({
+  duration: 1000,
+  easing: "linear", // default for segments without an override
+  keyframes: [
+    { at: 0, transform: start },
+    { at: 0.5, transform: mid, easing: "ease-out-cubic" }, // eases into `end`
+    { at: 1, transform: end },
+  ],
+});
+```
+
+## Interpolation model
+
+Between two keyframes, each transform property interpolates by its own rule (§9):
+
+| Property | Rule                                |
+| -------- | ----------------------------------- |
+| Position | Linear component-wise               |
+| Scale    | Linear component-wise               |
+| Rotation | Quaternion **SLERP**, shortest path |
+
+Shortest-path SLERP is the right default for orientations — but it means a rotation from `0` to `2π` animates _nothing_, because both endpoints are the same orientation. That is where angular tracks come in.
+
+## Angular rotation tracks (full revolutions)
+
+Set `rotationMode: "angular"` to interpolate authored Euler angles component-wise instead of collapsing to orientations (§9.1). A segment from `0` to `2π` now performs one full revolution — no intermediate keyframes:
+
+```ts
+const spin = Animation.from({
+  from: { rotation: [0, 0, 0] },
+  to: { rotation: [0, Math.PI * 2, 0] }, // a full turn about Y
+  duration: 1000,
+  rotationMode: "angular",
+});
+
+// At t = 500 ms the object is half-way through the turn — upside-down from
+// its start heading, not silently still.
+spin.sample(500);
+```
+
+Angles are captured verbatim when you author `rotation` as an `[x, y, z]` tuple; quaternion-authored values are decomposed to principal angles instead. A single quaternion cannot express "how many turns", which is exactly the information angular tracks preserve.
+
+The demo below runs SLERP (collapses to nothing) and angular (a real full turn) side by side so the difference is visible:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=interpolation-slerp-vs-angular--full-revolution" title="Live demo — SLERP vs angular full revolution" height="520" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/interpolation-slerp-vs-angular--full-revolution)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/interpolation-slerp-vs-angular--full-revolution) for the two definitions.
+
+## Raw matrix interpolation
+
+For advanced hosts, `interpolation: "raw-matrix"` switches sampling to explicit element-wise `Matrix4.lerp` of endpoint matrices (§9.2). It matches property-aware interpolation for translation-only motion, and throws loudly — never approximates — when a midpoint is not TRS-decomposable (interpolating between different-axis rotations produces shear):
+
+```ts
+const raw = Animation.from({
+  from,
+  to,
+  duration: 300,
+  interpolation: "raw-matrix", // explicit opt-in; default remains "trs"
+});
+```
+
+`rotationMode: "angular"` and `interpolation: "raw-matrix"` conflict (raw matrices never consult rotation tracks) — the combination throws at definition time.
+
+## See also
+
+- [Core concepts](../core-concepts/#euler-angles-are-intrinsic-x--y--z-in-radians)
+- Live easing gallery and interpolation comparisons in the [Storybook examples](../../storybook/).
+
+---
+
+# Playback & Lifecycle
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playback-lifecycle/
+
+`animation.attach()` creates an independent `Playback` — a stateful execution of an immutable definition (§11). Multiple playbacks can run from the same definition simultaneously; each owns its own time, direction, rate, and lifecycle (Appendix B.1).
+
+## Attaching
+
+```ts
+const playback = slide.attach(target.html(element), {
+  iterations: 2, // finite count, or "infinite" (default: 1)
+  direction: "alternate", // "normal" | "reverse" | "alternate" | "alternate-reverse"
+  playbackRate: 1.5, // positive = forward, negative = backward
+  autoplay: false, // start immediately? (default: false)
+});
+```
+
+The target is **optional** — `animation.attach()` with no target still gives full time control for hosts that render themselves by reading `playback.currentTime` and sampling the animation (§10.3).
+
+## The state machine (§12)
+
+States: `idle → running ⇄ paused → finished | cancelled`, plus terminal `disposed`.
+
+```ts
+playback.play(); // idle/paused → running; finished/cancelled → restart in the
+// current direction from the beginning
+playback.pause(); // running → paused; position and transform are retained
+playback.reverse(); // flip direction while preserving time
+playback.seek(420); // jump to 420 ms into the current iteration (clamped)
+playback.seekProgress(0.5); // equivalent at normalized progress
+playback.cancel(); // → cancelled; the last rendered transform stays on target
+await playback.finished; // { status: "finished" } | { status: "cancelled" }
+playback.dispose(); // release resources; later calls throw (idempotent itself)
+```
+
+Key guarantees:
+
+- **`currentTime`** is elapsed animation time within the current iteration, clamped to `[0, duration]` — it is _not_ wall-clock time.
+- **`finished` never rejects.** It resolves with a status object; awaiting it from `idle` waits for the first run, and every new run exposes a fresh promise. Code that awaits can therefore never hang: disposal settles any pending wait as `{ status: "cancelled" }`.
+- **Disposal is resource release, not destruction.** The animation definition, the render target, and any DOM/GPU objects survive untouched (Appendix B.8); adapter-level cleanup hooks run at most once.
+
+Drive every transition yourself — play, pause, reset, reverse, cancel — with a live readout of `state`, `currentTime`, and iteration:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-lifecycle--transport-controls" title="Live demo — playback transport and state machine" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-lifecycle--transport-controls)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-lifecycle--transport-controls) for the full example.
+
+## Playback rate
+
+`playbackRate` is settable while running and continuous — changing it never teleports `currentTime`, it only changes how fast time advances afterwards. Negative rates play backwards; combined with `direction: "alternate"` the two compose predictably (§13).
+
+## Repetition and direction (§13)
+
+Repetition is handled by the engine loop, not by duplicating keyframes:
+
+```ts
+const pendulum = slide.attach(target.html(element), {
+  iterations: "infinite",
+  direction: "alternate", // forward, backward, forward, …
+});
+```
+
+- `iterations: n` runs `n` times (including the first); `"infinite"` never completes — `finished` stays pending until cancel/dispose.
+- `direction: "reverse"` plays each iteration backwards; `"alternate"` flips per iteration; `"alternate-reverse"` starts reversed.
+- Multiple iteration boundaries can be crossed in a single frame (long stalls, high rates) without losing sync — time is computed from timestamps, never counted per frame (§16).
+
+Three alternate iterations, forward–back–forward, with the iteration counter visible:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-repetition-direction--alternate-thrice" title="Live demo — three alternating iterations" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-repetition-direction--alternate-thrice)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-repetition-direction--alternate-thrice) for the options.
+
+## Target ownership: replacement, not composition (§14)
+
+Starting a playback on a target **supersedes** the previous owner: the older playback is cancelled (its `finished` resolves `{ status: "cancelled" }`) and the newest one exclusively drives the target. There is no additive blending — if you want two motions to combine, compose the animations first with `Animation.combine`, then attach once.
+
+Start A, then B: A's `finished` resolves `{ status: "cancelled" }` while B takes over the shared target — no blending, both statuses shown live:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-target-supersede--ownership-transfer" title="Live demo — target supersede and ownership transfer" height="460" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-target-supersede--ownership-transfer)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-target-supersede--ownership-transfer) for the two playbacks.
+
+## Deterministic testing with manual timing
+
+Timekeeping and scheduling are injectable interfaces kept separate (§16). In tests, drive everything by hand — no timers, no flake:
+
+```ts
+import { ManualClock, ManualScheduler, PlaybackEngine } from "keyframe-flow";
+
+const clock = new ManualClock(0);
+const scheduler = new ManualScheduler();
+const engine = new PlaybackEngine({ clock, scheduler });
+
+const playback = slide.attach(undefined, { engine });
+playback.play();
+
+clock.advance(500); // move virtual time…
+scheduler.tick(clock.now()); // …and deliver a frame to all active playbacks
+playback.currentTime; // exactly 500 — fully deterministic
+```
+
+The default engine is created lazily on first use with the system clock and a requestAnimationFrame-based scheduler (falling back to timers in Node), so normal usage needs no setup.
+
+## See also
+
+- [Render adapters](../render-adapters/) — what targets receive and own.
+- Live lifecycle playground in the [Storybook examples](../../storybook/).
+
+---
+
+# Render Adapters & Custom Targets
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/render-adapters/
+
+A render target is any object with a `setTransform(matrix)` method (§17.1). That's the entire contract — no base class, no imports from this library required inside your renderer:
+
+```ts
+import type { Matrix4, RenderTarget } from "keyframe-flow";
+
+const logger: RenderTarget = {
+  setTransform(matrix: Matrix4): void {
+    console.log("position x =", matrix.el(12)); // column-major translation
+  },
+};
+
+slide.attach(logger).play();
+```
+
+Adapters **own rendering state only** — they never touch playback time or lifecycle (§3.6), and disposing a playback never destroys the host's element, context, or GPU resources (Appendix B.8). An optional `dispose()` hook on the target lets adapters release whatever _they_ allocated; it runs at most once.
+
+The recorder below is a pure structural target — an object literal with just `setTransform` — counting every matrix the engine submits:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-custom-structural-target--matrix-recorder" title="Live demo — custom structural target recording matrices" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-custom-structural-target--matrix-recorder)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-custom-structural-target--matrix-recorder) for the target's source.
+
+## HTML — `target.html(element)`
+
+Writes CSS `matrix3d()` values in column-major argument order — no transposition, verified against the browser's own CSS parser:
+
+```ts
+const playback = slide.attach(target.html(box)); // owns style.transform
+```
+
+Because the adapter owns the inline transform property, any pre-existing `transform` is replaced on the first evaluated frame. A one-time origin can be set explicitly (§17.3):
+
+```ts
+target.html(box, { transformOrigin: "0 0" });
+```
+
+The live demo shows the exact `matrix3d()` string written to the element's `style.transform`, read back from the DOM:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-html-adapter--matrix-3-d" title="Live demo — HTML adapter writing matrix3d" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-html-adapter--matrix-3-d)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-html-adapter--matrix-3-d) to switch the transform-origin.
+
+## SVG — `target.svg(element)`
+
+Writes the SVG 1.1 `transform="matrix(a, b, c, d, e, f)"` attribute mapped from the matrix's column vectors. SVG is inherently 2D affine here: Z and perspective members are not expressible and are dropped by design (§17).
+
+```ts
+slide.attach(target.svg(document.querySelector("g")!));
+```
+
+The live demo writes the SVG `transform="matrix(a, b, c, d, e, f)"` attribute and shows it updating:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-svg-adapter--matrix-attribute" title="Live demo — SVG adapter writing the matrix attribute" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-svg-adapter--matrix-attribute)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-svg-adapter--matrix-attribute) for the source.
+
+## Canvas 2D — `target.canvas(context)`
+
+A 4×4 matrix cannot be applied to a 2D context directly, so the adapter runs an explicit **projection step** rather than forwarding raw values (§17.3): the origin and X/Y basis images are projected through homogeneous perspective division with an optional camera distance, and the fitted affine is installed with `setTransform` — which replaces the CTM deterministically (it composes nothing).
+
+```ts
+const ctx = canvasElement.getContext("2d")!;
+
+// Orthographic by default: pure 2D inputs reduce exactly to their affine part.
+slide.attach(target.canvas(ctx));
+
+// Objects pushed toward +z shrink away from a camera at distance 400.
+slide.attach(target.canvas(ctx, { perspective: 400 }));
+```
+
+The projection is exposed as the pure function `projectToCanvas2D(matrix, options)` if you need it in your own draw code.
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-canvas-2d-adapter--projected-motion" title="Live demo — Canvas 2D adapter with projected CTM" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-canvas-2d-adapter--projected-motion)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-canvas-2d-adapter--projected-motion) to read the fitted `e`/`f` translation live.
+
+## WebGL — `target.webgl(options)`
+
+GPU adapters own only rendering state: the latest evaluated transform as a column-major `Float32Array` — exactly what `gl.uniformMatrix4fv` and GLSL `mat4` consume (§15). No GL resources are created; you upload (and draw) in the hook or from your own loop:
+
+```ts
+slide.attach(
+  target.webgl({
+    onTransform: (values) => {
+      gl.uniformMatrix4fv(uModelLocation, false, values);
+      gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+    },
+  }),
+);
+
+// Or poll without a callback — `matrixValues` returns a copy, and
+// `copyMatrixValuesTo(out)` fills an existing buffer without allocating.
+```
+
+The story owns the GL context and draw loop; the adapter just keeps the `uModel` uniform fresh each frame — watch the quad transform:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-webgl-adapter--uniform-upload" title="Live demo — WebGL adapter uploading a mat4 uniform" height="520" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-webgl-adapter--uniform-upload)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-webgl-adapter--uniform-upload) for the shader and draw code.
+
+## WebGPU — `target.webgpu(options)`
+
+Identical shape to WebGL for WGSL hosts: the same column-major layout matches `mat4x4<f32>` uniforms element-for-element (§15). Device, queue, and command encoder ownership stay entirely host-side — encode your draw calls in `onTransform`.
+
+```ts
+slide.attach(
+  target.webgpu({
+    onTransform: (values) => {
+      device.queue.writeBuffer(matrixUniforms, 0, values);
+    },
+  }),
+);
+```
+
+This story stays device-free — it shows exactly the column-major values a `queue.writeBuffer` call would receive each frame:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-webgpu-adapter--uniform-write" title="Live demo — WebGPU adapter uniform buffer write values" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-webgpu-adapter--uniform-write)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-webgpu-adapter--uniform-write) for the source.
+
+## Ownership and disposal semantics (§17.2)
+
+- The **most recently started** playback owns a target; starting another one supersedes the previous owner (replacement, never additive — §14).
+- `playback.dispose()` runs the adapter's optional `dispose()` hook but leaves host objects fully intact: elements keep their last transform and remain writable, contexts stay usable, custom target data survives.
+- Adapters are reusable after disposal — nothing GPU/DOM-side is destroyed by library code (Appendix B.8).
+
+## See also
+
+- API reference for the `RenderTarget` interface and adapter factories.
+- Live HTML/SVG/Canvas/custom-target demos in the [Storybook examples](../../storybook/).
+
+---
+
+# React Integration
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/react-integration/
+
+The core package is framework-free — its build never sees React (§2 principle 1). When you work in a React app, import the dedicated component helpers from the `keyframe-flow/react` subpath; React is a peer dependency of that entry only.
+
+```ts
+import { Animation, target } from "keyframe-flow";
+import { Animated, useKeyframePlayback } from "keyframe-flow/react";
+```
+
+## `<Animated>` — declarative HTML
+
+The smallest helper: renders a `div` whose transform is driven by an animation through the built-in HTML adapter. The playback attaches on mount and disposes on unmount without touching the element itself (Appendix B.8).
+
+```tsx
+import { useMemo } from "react";
+import { Animation, transform } from "keyframe-flow";
+import { Animated } from "keyframe-flow/react";
+
+const slideIn = Animation.from({
+  from: transform().translate(0, 24),
+  to: transform(),
+  duration: 300,
+});
+
+export function Card() {
+  return <Animated animation={slideIn} options={{ autoplay: true }} className="card" />;
+}
+```
+
+`options` accepts every `PlaybackOptions` field (`iterations`, `direction`, `playbackRate`, `autoplay`, `engine`) plus `makeTarget`; it defaults to `target.html(host)`. Pass a different factory for SVG, Canvas, or GPU output.
+
+## `useKeyframePlayback` — full transport control
+
+The hook owns one `Playback` per mounted host element and returns a handle: refs to wire into JSX, mirrored state for readouts, and transport controls.
+
+```tsx
+import { useCallback } from "react";
+import { Animation, target } from "keyframe-flow";
+import { useKeyframePlayback } from "keyframe-flow/react";
+
+export function Demo() {
+  const animation = useMemo(
+    () =>
+      Animation.from({
+        from: { position: [-120, 0, 0] },
+        to: { position: [120, 0, 0], rotation: [0, 0, Math.PI / 4] },
+        duration: 1200,
+      }),
+    [],
+  );
+
+  const handle = useKeyframePlayback<HTMLDivElement>(animation, {
+    autoplay: true,
+    makeTarget: useCallback((host) => target.html(host), []),
+  });
+
+  return (
+    <>
+      <div ref={handle.ref} />
+      <button onClick={handle.play}>play</button>
+      <button onClick={handle.pause}>pause</button>
+      <button onClick={handle.reset}>reset</button>
+      <span>
+        {handle.state} · t = {handle.currentTime.toFixed(0)} ms
+      </span>
+    </>
+  );
+}
+```
+
+The handle exposes `state`, `currentTime`, `iterationCount`, and `result` mirrored from the live playback, plus `play`, `pause`, `reverse`, `reset`, `cancel`, `seek`, and `seekProgress`. State is sampled on frames while a run is live and re-synced after every control action, so readouts never go stale after play-after-finish, reset, or seek.
+
+### Lifecycle semantics
+
+- **Attach:** the playback is created on mount from the host behind `ref` and re-attached whenever the animation or any option changes identity — the old playback is disposed; the host element survives (§17.2).
+- **Reset:** rewinds to progress 0 facing forward, so the next `play()` always runs 0 → 1 even after a `reverse()` (§12 restarts in the current direction).
+- **Dispose on unmount** never destroys the host element or its content (Appendix B.8) — GPU contexts, canvas content, and event listeners you own stay intact.
+
+Memoize `animation` (`useMemo`) and `options.makeTarget` (`useCallback`) — new identities on every render would re-attach each render.
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-lifecycle--transport-controls" title="Live demo — transport controls built with useKeyframePlayback" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-lifecycle--transport-controls) · [Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-lifecycle--transport-controls)
+
+## What to read next
+
+- [Playback & lifecycle](../playback-lifecycle/) — the state machine the hook mirrors.
+- [Render adapters & custom targets](../render-adapters/) — what `makeTarget` can return.
+- Every guide's live example also ships a React twin: browse them together in the [examples gallery](https://johnsonjo4531.github.io/keyframe-flow/examples/).
+
+---
+
+# Contributing Docs
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/contributing-docs/
+
+Everything on the documentation site is generated or authored in this repository — no hosted CMS, no manual HTML. This page documents the pipeline.
+
+## What lives where
+
+| Path                                | Role                                      | Built by                            |
+| ----------------------------------- | ----------------------------------------- | ----------------------------------- |
+| `docs/*.md`                         | User-facing guides (authored)             | copied into the API reference build |
+| `README.md`                         | Library landing page (GitHub + docs home) | same                                |
+| `typedoc.json`                      | API reference + theme configuration       | —                                   |
+| `site/docs/`                        | Generated API reference & guides          | `make build-docs`                   |
+| `examples/.storybook/`              | Storybook config                          | —                                   |
+| `examples/stories/**/*.stories.tsx` | Live examples (authored)                  | —                                   |
+| `site/storybook/`                   | Built Storybook                           | `make build-storybook`              |
+| `docs/embed-host-rewrite.js`        | Embed-preview shim (no-op on Pages)       | copied into `site/docs/`            |
+| `docs/site-index.html`              | Combined-site landing page                | copied by deploy target             |
+| `site/`                             | Whole staging site                        | both targets                        |
+
+The published site is a single GitHub Pages deployment: guides + API reference at `/keyframe-flow/docs/`, examples at `/keyframe-flow/storybook/`, and the landing page at the root.
+
+## Building locally
+
+```sh
+make build-docs # TypeDoc + clean-jsdoc-theme v5 → site/docs
+make build-storybook # Storybook (React/Vite) → site/storybook
+```
+
+Preview the combined site after also copying the landing page:
+
+```sh
+cp docs/site-index.html site/index.html && touch site/.nojekyll
+npx serve site
+```
+
+`site/` is generated output — never edit files inside it directly, and never commit it.
+
+<Callout type="info">
+  The theme emits `_assets/` and `_islands/` directories. Jekyll (which runs on GitHub Pages by default) strips underscore-prefixed paths, so the deploy target always stages a `.nojekyll` marker at the site root. Without it the deployed site renders unstyled.
+</Callout>
+
+## Docs base paths
+
+GitHub Pages hosts this project under `/keyframe-flow/`, and every base path must agree:
+
+- `typedoc.json → cleanJsdocTheme.basePath`: `/keyframe-flow/docs` (the API reference lives in a sub-path of the site, not its root).
+- Storybook build: output served from `/keyframe-flow/storybook/`; builder-vite emits fully relative asset URLs, so the site is portable under any mount path (no `--base-path` flag exists in Storybook 10).
+- Guide links to other sites/pages use **relative** paths (`../../storybook/…`) so they resolve identically from any docs sub-page. (Root-absolute hrefs written in guide Markdown are rewritten by the theme relative to `basePath` — `/keyframe-flow/storybook/…` ends up as `/keyframe-flow/docs/keyframe-flow/storybook/…` — so avoid them in prose.)
+
+## Authoring guides
+
+Guides are Markdown with flat frontmatter for sidebar placement:
+
+```markdown
+---
+title: Playback & Lifecycle
+group: Guides
+order: 4
+---
+```
+
+- `group` must appear in `cleanJsdocTheme.docGroups` (typedoc.json) to control section order; unlisted groups are appended.
+
+- `order` sorts within the group.
+
+- Cross-link symbols with `{@link SymbolName}` — the theme resolves them to real API pages at build time. Unresolved namepaths silently render as inline code, so after adding links, grep the built HTML:
+
+  ```sh
+  grep -r "{@link" site/docs --include=index.html # must find nothing outside source listings and this file's own code samples
+  ```
+
+- Keep guides user-facing; design rationale stays in [`design-docs/vision.md`](https://github.com/johnsonjo4531/keyframe-flow/blob/main/design-docs/vision.md) and is referenced by section number (§5, §17, …), not duplicated.
+
+## Playable examples in guides
+
+Guides embed live Storybook stories so readers can run the example without leaving the page. The theme renders a fenced `iframe` block into a sandboxed embed (`allow-scripts allow-same-origin`); its config grammar is `<url> key=value`:
+
+````markdown
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-html-adapter--matrix-3-d title="Live demo — HTML adapter" height=470 themed=false
+```
+````
+
+Conventions:
+
+- **Protocol-relative URL pinned to the published host** (`//johnsonjo4531.github.io/…`): the theme only accepts `https://` or `//` URLs, and on GitHub Pages this resolves same-origin to the published Storybook. Locally, `build-docs` injects `docs/embed-host-rewrite.js`, a no-op on GitHub Pages that rewrites such URLs to same-origin paths so a locally served copy of `site/` previews embeds against the local build.
+- Point at `storybook/iframe.html?id=<story-id>` — the bare story canvas with its transport buttons (play/pause/reset/reverse/cancel), so the embed is playable. The full story page additionally exposes arg controls, so pair each embed with an "Open in Storybook" link using the manager's **canonical** route form: `[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/<story-id>)`. A bare `?id=<story-id>` does **not** work: the manager ignores it, lands on whichever story was opened first, and produces a broken canvas. Use absolute published-host URLs (like embeds do) — relative `../../storybook/` links resolve wrong when a server serves guide pages without a trailing slash, and the theme rewrites root-relative `/…` paths under its own docs base.
+- **Pair every embed with a Vanilla TypeScript link.** Storybook runs on one UI renderer per build (`react-vite`), so plain-TypeScript stories can't live beside the React ones; the vanilla twins instead ship in a standalone Vite gallery at `/keyframe-flow/examples/` (built by `make build-gallery` from `examples/gallery/`). Every example module under `examples/vanilla/` imports only `keyframe-flow` and DOM APIs — never React. Gallery ids mirror Storybook story ids, so each embed gains a relative link below it: `[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/<story-id>)`. To add an example: write the vanilla mount in `examples/vanilla/`, register it (id, title, section, args mirroring the story defaults, both sources via Vite `?raw` imports) in `examples/gallery/examples.ts`, and add the docs link.
+- `themed=false` opts out of the theme's automatic `?theme-id=` append (the URL already carries a query string; Storybook manages its own theme).
+- Height: \~380 px for canvas-only stories, \~470 px when transport buttons and a state readout render below the animation.
+
+Embeds resolve against the built Storybook, so a docs page's embeds only work when both surfaces are built (`make build`). To preview the whole site — docs, Storybook, and the examples gallery — under the path prefix the published URLs use, run:
+
+```sh
+make preview-site   # http://localhost:4173/keyframe-flow/
+```
+
+The target symlinks `site/` into `.preview/keyframe-flow/` (the site's absolute `/keyframe-flow/` base paths need that name at the served root) and serves it with Python's stdlib server, so nothing else needs to run. Avoid "clean URL" static hosts like `serve`: they 301-redirect `*.html` requests to extensionless paths and **drop query strings**, which breaks Storybook's `iframe.html?id=<story-id>` embeds ("No Preview"). GitHub Pages keeps query strings, so published embeds are unaffected.
+
+## JSDoc rules for public exports
+
+Every public export needs a description, `@param`/`@returns` where it takes arguments or returns values, at least one runnable `@example`, and `{@link}` references to related symbols. The TypeDoc build runs with theme `strict: true` and must stay **warning-free** — treat any new warning from `make build-docs` as a broken build. Common sources:
+
+- A public signature referencing an undocumented, unexported type (export it or document it).
+- `{@link}` targets that don't exist in the export graph.
+- Relative Markdown links pointing at files outside the docs inputs.
+
+## Storybook stories
+
+Stories live in `examples/stories/` and mount a real keyframe-flow animation into a React host with working controls (duration, easing, play/pause). Add a story when a feature ships without one; naming follows the guide structure (e.g. `Playback/Lifecycle`).
+
+The Code panel is enabled globally (`parameters.docs.codePanel: true` in `.storybook/preview.tsx`, backed by the `@storybook/addon-docs` addon) so each story shows its source next to the canvas. Storybook's auto-generated snippet collapses to a minified `<l …/>` tag in production builds, so an `enforce: "pre"` Vite plugin (`injectStorySourcePlugin` in `.storybook/main.ts`) appends each story file's verbatim TSX into `meta.parameters.docs.source.code`. If you add a new story file, keep the `const meta = …; export default meta;` shape — that is what the plugin looks for.
+
+## LLM-friendly indexes (llms.txt)
+
+The theme publishes the docs for AI tools automatically (`llmsTxt: true` in `typedoc.json`, which requires `siteUrl`): every build emits `llms.txt` — an [llms.txt](https://llmstxt.org) index, one section per sidebar group, each entry linking the page's companion Markdown with its description — and `llms-full.txt`, all page bodies concatenated. Both land at the docs root (`/keyframe-flow/docs/llms.txt`) and are linked from the header menu, the README, and the Getting Started guide.
+
+Contributors get this for free: every content page already ships a companion `index.md` beside its HTML (append `index.md` to any page URL), and new guides or API pages appear in both indexes automatically — grouped by their sidebar group (`group:` frontmatter / `@category`). Source-file viewer pages are never listed. If the site ever gains locales, each locale gets its own files.
+
+## Deploy
+
+```sh
+make github_pages_deploy
+```
+
+Builds docs, Storybook, and the examples gallery into `site/`, stages the landing page + `.nojekyll`, and publishes `site/` to the `gh-pages` branch via `gh-pages`. The workflow is purely Makefile-driven — no CI file needed for now.
+
+---
+
+# AnimatedProperties
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animatedproperties/
+
+<Signature
+  code="interface AnimatedProperties {
+	position: boolean;
+	rotation: boolean;
+	scale: boolean;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L88" label="animation.ts:88" />
+
+Which transform properties an animation actually changes (§14).
+
+---
+
+## Properties
+
+<MemberHeading id="position" depth="3" name="position" sig="position: boolean" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L90" sourceLabel="animation.ts:90" />
+
+True when position changes anywhere in the timeline (§14).
+
+<MemberHeading id="rotation" depth="3" name="rotation" sig="rotation: boolean" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L92" sourceLabel="animation.ts:92" />
+
+True when orientation changes anywhere — q/−q count as equal (§14).
+
+<MemberHeading id="scale" depth="3" name="scale" sig="scale: boolean" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L94" sourceLabel="animation.ts:94" />
+
+True when scale changes anywhere in the timeline (§14).
+
+---
+
+# Animation
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animation/
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L200" label="animation.ts:200" />
+
+An immutable, reusable animation definition (§5.1). Definitions describe motion; they are not playback instances and hold no execution state (Appendix B.1). All keyframe sources — arrays, synchronous iterables, generator instances, and functions returning iterables — are consumed eagerly and exactly once when `Animation.from()` is called, producing a normalized timeline that every consumer shares (§5.5).
+
+**Remarks**
+
+Manual sampling is first-class and requires no scheduler or render target (§10); `sample(ms)` and `sampleProgress(p)` evaluate the same timeline.
+
+Composite definitions created by [Animation.combine](/keyframe-flow/docs/animation#combine) and [Animation.group](/keyframe-flow/docs/animation#group) evaluate through property tracks and child routing instead of materialized keyframes — their `keyframes` array is empty and their inputs are exposed as [Animation.children](/keyframe-flow/docs/animation#children) (§14).
+
+---
+
+## Properties
+
+<MemberHeading id="children" depth="3" name="children" sig="children: readonly Animation[]" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L212" sourceLabel="animation.ts:212" />
+
+Inputs of a composite animation (`combine`/`group`); `[]` otherwise (§14).
+
+<MemberHeading id="duration" depth="3" name="duration" sig="duration: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L202" sourceLabel="animation.ts:202" />
+
+Total duration in milliseconds (§6.2).
+
+<MemberHeading id="keyframes" depth="3" name="keyframes" sig="keyframes: readonly NormalizedKeyframe[]" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L209" sourceLabel="animation.ts:209" />
+
+The eagerly normalized, frozen timeline shared by all consumers (§5.5). Composite animations built by `combine`/`group` evaluate through their `Animation.children` instead and expose an empty timeline here.
+
+## Accessors
+
+<MemberHeading id="animatedproperties" depth="3" name="animatedProperties" sig="get animatedProperties(): AnimatedProperties" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L438" sourceLabel="animation.ts:438" />
+
+Which transform properties this animation actually changes (§14). Keyframe timelines compare every keyframe; composite animations sample their evaluation. Property tracks built on this detection power `Animation.combine` and parallel groups.
+
+## Methods
+
+<MemberHeading
+  id="attach"
+  depth="3"
+  name="attach"
+  sig="attach(
+	target?: RenderTarget,
+	options?: PlaybackOptions,
+): Playback"
+/>
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L483" sourceLabel="animation.ts:483" />
+
+Creates an independent playback instance from this definition (§11). The instance has its own execution state and lifecycle while sharing the definition's immutable normalized timeline — definitions are not playback instances (Appendix B.1). Attachment is optional: `attach()` without a target still provides full time control (`play`, `pause`, `seek`, repetition, completion promises) for hosts that render themselves (§11).
+
+Concurrent playbacks on the same target follow replacement semantics: the most recently started playback owns the target and supersedes the previous one without additive composition (§14).
+
+**Parameters**
+
+- `target` ([RenderTarget](/keyframe-flow/docs/rendertarget), optional)
+- `options` ([PlaybackOptions](/keyframe-flow/docs/playbackoptions), optional)
+
+**Returns**
+
+- [`Playback`](/keyframe-flow/docs/playback)
+
+**Example**
+
+```ts
+const playback = spin.attach(target.html(element), { iterations: 2 });
+playback.play();
+await playback.finished; // { status: "finished" } — never rejects
+```
+
+<MemberHeading id="sample" depth="3" name="sample" sig="sample(timeMs: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L499" sourceLabel="animation.ts:499" />
+
+Samples the timeline at elapsed milliseconds (§10.1). Out-of-range times are clamped to the animation boundaries; `sample(500)` on a 2000 ms animation is equivalent to `sampleProgress(0.25)`.
+
+**Parameters**
+
+- `timeMs` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+**Example**
+
+```ts
+const slide = Animation.from({ to: { position: [100, 0, 0] }, duration: 1000 });
+slide.sample(500).components.position.x; // 50
+slide.sample(2000).components.position.x; // 100 — clamped to the end
+```
+
+<MemberHeading id="sampleprogress" depth="3" name="sampleProgress" sig="sampleProgress(progress: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L524" sourceLabel="animation.ts:524" />
+
+Samples the timeline at normalized progress in `[0, 1]` (§10.2), evaluating the same underlying timeline as `Animation.sample`. Out-of-range progress is clamped to the animation boundaries. Sampling never mutates the definition and requires no scheduler or render target (§10.3).
+
+**Parameters**
+
+- `progress` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+**Example**
+
+```ts
+// Drive your own frame loop — sampling needs nothing else:
+function draw(progress: number): void {
+const matrix = slide.sampleProgress(progress).toMatrix();
+gl.uniformMatrix4fv(uModel, false, matrix.toFloat32Array());
+}
+```
+
+## Static Methods
+
+<MemberHeading id="combine" depth="3" name="combine" sig="combine(animations: readonly Animation[]): Animation" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L343" sourceLabel="animation.ts:343" />
+
+Composes independent animations into one definition through property tracks (§14): at any progress point, each input is sampled by elapsed time (shorter inputs hold their final value once complete), and the result merges per transform property — an input only overrides the properties it actually animates, with later inputs winning overlaps. The combined duration is the longest input's duration.
+
+This is the convenience layer over the track model; movement, rotation, and scale authored as separate animations compose without manually authoring a combined animation (§14).
+
+**Parameters**
+
+- `animations` (readonly [Animation](/keyframe-flow/docs/animation)\[])
+
+**Returns**
+
+- [`Animation`](/keyframe-flow/docs/animation)
+
+**Example**
+
+```ts
+const move = Animation.from({ to: { position: [200, 0, 0] }, duration: 1000 });
+const spin = Animation.from({ to: { rotation: [0, Math.PI, 0] }, duration: 1000 });
+const pulse = Animation.from({ to: { scale: 1.4 }, duration: 500 });
+
+const composed = Animation.combine([move, spin, pulse]);
+composed.attach(target.html(element)).play();
+```
+
+<MemberHeading id="from" depth="3" name="from" sig="from(definition: AnimationDefinition): Animation" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L260" sourceLabel="animation.ts:260" />
+
+Creates an immutable animation definition from a from/to definition (§5.2), a property-level definition (§7), or a keyframe definition with array, iterable, generator, or factory sources (§5.3–§5.5). Keyframes are normalized and validated eagerly; invalid definitions throw here rather than failing later during sampling or playback (§6.3).
+
+**Parameters**
+
+- `definition` ([AnimationDefinition](/keyframe-flow/docs/animationdefinition))
+
+**Returns**
+
+- [`Animation`](/keyframe-flow/docs/animation)
+
+**Example**
+
+```ts
+import { Animation } from "keyframe-flow";
+
+const fadeUp = Animation.from({
+  from: { position: [0, 20, 0] }, // property-level (§7): scale stays identity
+  to: { position: [0, 0, 0] },
+  duration: 300,
+  easing: "ease-out",
+});
+```
+
+<MemberHeading
+  id="group"
+  depth="3"
+  name="group"
+  sig="group(
+	animations: readonly Animation[],
+	options?: AnimationGroupOptions,
+): Animation"
+/>
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L371" sourceLabel="animation.ts:371" />
+
+Groups animations into a single definition — full groups and nested timelines (§14, §19). Because groups are ordinary `Animation` values, nesting composes naturally: groups can contain groups.
+
+**Remarks**
+
+- `"sequence"` (default): children play back to back; the group's duration is the sum of child durations.
+- `"parallel"`: children run simultaneously over the longest child's duration, merging animated properties with later-wins precedence — equivalent to [Animation.combine](/keyframe-flow/docs/animation#combine).
+
+**Parameters**
+
+- `animations` (readonly [Animation](/keyframe-flow/docs/animation)\[])
+- `options` ([AnimationGroupOptions](/keyframe-flow/docs/animationgroupoptions), optional)
+
+**Returns**
+
+- [`Animation`](/keyframe-flow/docs/animation)
+
+**Example**
+
+```ts
+const showThenSpin = Animation.group([fadeIn, spin]); // one after the other
+const entrance = Animation.group([move, rotate], { layout: "parallel" });
+const scene = Animation.group([entrance, tail]); // groups nest naturally
+```
+
+---
+
+# AnimationDefinition
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animationdefinition/
+
+<Signature code="AnimationDefinition = AnimationFromToDefinition | AnimationKeyframesDefinition" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L72" label="animation.ts:72" />
+
+Any animation definition accepted by `Animation.from()` (§5.1).
+
+---
+
+# AnimationFromToDefinition
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animationfromtodefinition/
+
+<Signature
+  code="interface AnimationFromToDefinition extends AnimationDefinitionBase {
+	duration: number;
+	easing?: Easing;
+	from?: TransformInit | Transform;
+	interpolation?: AnimationInterpolation;
+	rotationMode?: RotationMode;
+	to?: TransformInit | Transform;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L58" label="animation.ts:58" />
+
+From/to definition (§5.2). `from` and `to` accept complete transforms or property-level partial objects (§7); unspecified properties are preserved from the explicit starting transform, falling back to documented identity defaults when no starting transform is supplied.
+
+#### Hierarchy
+
+- `AnimationDefinitionBase`
+- `AnimationFromToDefinition`
+
+---
+
+## Properties
+
+<MemberHeading id="duration" depth="3" name="duration" sig="duration: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L43" sourceLabel="animation.ts:43" />
+
+_Inherited from&#x20;_`duration`
+
+Total duration in milliseconds (§6.2).
+
+<MemberHeading id="easing" depth="3" name="easing" sig="easing: Easing" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L45" sourceLabel="animation.ts:45" />
+
+_Inherited from&#x20;_`easing`
+
+Animation-level default easing (§8). Defaults to `"linear"`.
+
+<MemberHeading id="from" depth="3" name="from" sig="from: TransformInit | Transform" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L60" sourceLabel="animation.ts:60" />
+
+Starting transform or property-level partial (§5.2, §7); omitted means identity.
+
+<MemberHeading id="interpolation" depth="3" name="interpolation" sig="interpolation: AnimationInterpolation" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L49" sourceLabel="animation.ts:49" />
+
+_Inherited from&#x20;_`interpolation`
+
+Advanced interpolation strategy (§9.2). Defaults to `"trs"`.
+
+<MemberHeading id="rotationmode" depth="3" name="rotationMode" sig="rotationMode: RotationMode" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L47" sourceLabel="animation.ts:47" />
+
+_Inherited from&#x20;_`rotationMode`
+
+Rotation interpolation strategy (§9.1). Defaults to `"quaternion"`.
+
+<MemberHeading id="to" depth="3" name="to" sig="to: TransformInit | Transform" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L62" sourceLabel="animation.ts:62" />
+
+Ending transform or property-level partial; properties not specified are preserved from `from` (§7).
+
+---
+
+# AnimationGroupOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animationgroupoptions/
+
+<Signature
+  code="interface AnimationGroupOptions {
+	layout?: GroupLayout;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L78" label="animation.ts:78" />
+
+Options for `Animation.group`.
+
+---
+
+## Properties
+
+<MemberHeading id="layout" depth="3" name="layout" sig="layout: GroupLayout" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L84" sourceLabel="animation.ts:84" />
+
+`"sequence"` (default) plays children back to back over the summed duration; `"parallel"` runs them simultaneously over the longest child's duration, merging animated properties with later-wins precedence (§14).
+
+---
+
+# AnimationInterpolation
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animationinterpolation/
+
+<Signature code="AnimationInterpolation = 'trs' | 'raw-matrix'" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L38" label="animation.ts:38" />
+
+Interpolation strategy for animation sampling (§9).
+
+- `"trs"` (default): property-aware interpolation — linear translation and scale, quaternion SLERP or angular rotation interpolation (§9.1).
+- `"raw-matrix"`: explicit advanced raw element-wise interpolation of the endpoint matrices (§9.2). Raw results that are not TRS-decomposable throw explicitly rather than being approximated; interpolated rotations in particular usually produce shear.
+
+---
+
+# AnimationKeyframesDefinition
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/animationkeyframesdefinition/
+
+<Signature
+  code="interface AnimationKeyframesDefinition extends AnimationDefinitionBase {
+	duration: number;
+	easing?: Easing;
+	interpolation?: AnimationInterpolation;
+	keyframes: TransformKeyframeSource;
+	rotationMode?: RotationMode;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L66" label="animation.ts:66" />
+
+Keyframe definition (§5.3, §5.4) with an eager keyframe source (§5.5).
+
+#### Hierarchy
+
+- `AnimationDefinitionBase`
+- `AnimationKeyframesDefinition`
+
+---
+
+## Properties
+
+<MemberHeading id="duration" depth="3" name="duration" sig="duration: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L43" sourceLabel="animation.ts:43" />
+
+_Inherited from&#x20;_`duration`
+
+Total duration in milliseconds (§6.2).
+
+<MemberHeading id="easing" depth="3" name="easing" sig="easing: Easing" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L45" sourceLabel="animation.ts:45" />
+
+_Inherited from&#x20;_`easing`
+
+Animation-level default easing (§8). Defaults to `"linear"`.
+
+<MemberHeading id="interpolation" depth="3" name="interpolation" sig="interpolation: AnimationInterpolation" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L49" sourceLabel="animation.ts:49" />
+
+_Inherited from&#x20;_`interpolation`
+
+Advanced interpolation strategy (§9.2). Defaults to `"trs"`.
+
+<MemberHeading id="keyframes" depth="3" name="keyframes" sig="keyframes: TransformKeyframeSource" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L68" sourceLabel="animation.ts:68" />
+
+Array, iterable, generator instance, or factory function — consumed eagerly once at definition time (§5.4, §5.5).
+
+<MemberHeading id="rotationmode" depth="3" name="rotationMode" sig="rotationMode: RotationMode" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/animation-ts/#L47" sourceLabel="animation.ts:47" />
+
+_Inherited from&#x20;_`rotationMode`
+
+Rotation interpolation strategy (§9.1). Defaults to `"quaternion"`.
+
+---
+
+# AttachOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/attachoptions/
+
+<Signature code="AttachOptions = PlaybackOptions" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L16" label="animation.ts:16" />
+
+Options accepted by `Animation.attach` (§11).
+
+---
+
+# Canvas2DTargetOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/canvas2dtargetoptions/
+
+<Signature
+  code="interface Canvas2DTargetOptions {
+	perspective?: number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/canvas-ts/#L15" label="canvas.ts:15" />
+
+Options for `canvas`.
+
+---
+
+## Properties
+
+<MemberHeading id="perspective" depth="3" name="perspective" sig="perspective: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/targets/canvas-ts/#L21" sourceLabel="canvas.ts:21" />
+
+Camera distance in user-space units for the perspective projection step. Omit (or `Infinity`) for orthographic projection, which keeps parallel lines parallel and is the right default for most 2D scenes (§17.3).
+
+---
+
+# CanvasRenderingContext2DLike
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/canvasrenderingcontext2dlike/
+
+<Signature
+  code="interface CanvasRenderingContext2DLike {
+	setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/canvas-ts/#L9" label="canvas.ts:9" />
+
+The structural subset of a Canvas 2D context the adapter needs — only `setTransform` is required, so mocks and offscreen contexts work too. No DOM lib types are referenced (§2 principle 1).
+
+---
+
+## Methods
+
+<MemberHeading
+  id="settransform"
+  depth="3"
+  name="setTransform"
+  sig="setTransform(
+	a: number,
+	b: number,
+	c: number,
+	d: number,
+	e: number,
+	f: number,
+): void"
+/>
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/canvas-ts/#L11" sourceLabel="canvas.ts:11" />
+
+Replaces the context's current transform matrix (CTM) — never composes (§17.3).
+
+**Parameters**
+
+- `a` (number)
+- `b` (number)
+- `c` (number)
+- `d` (number)
+- `e` (number)
+- `f` (number)
+
+**Returns**
+
+- `void`
+
+---
+
+# Clock
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/clock/
+
+<Signature
+  code="interface Clock {
+	now(): number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/timing/clock-ts/#L7" label="clock.ts:7" />
+
+A monotonic-ish time source returning milliseconds (§16). Clocks provide time; schedulers coordinate updates — scheduling is not timekeeping (Appendix B.7). The clock and scheduler are separate injectable interfaces so the playback engine can drive animations in any environment.
+
+#### Implemented By
+
+- [`ManualClock`](/keyframe-flow/docs/manualclock)
+
+---
+
+## Methods
+
+<MemberHeading id="now" depth="3" name="now" sig="now(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/clock-ts/#L9" sourceLabel="clock.ts:9" />
+
+Current time in milliseconds, from an arbitrary but stable origin.
+
+**Returns**
+
+- `number`
+
+---
+
+# createFrameScheduler
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/createframescheduler/
+
+<Signature code="createFrameScheduler(): Scheduler" />
+
+<SourceLink href="/keyframe-flow/docs/source/timing/scheduler-ts/#L75" label="scheduler.ts:75" />
+
+Creates the default frame scheduler (§16): `requestAnimationFrame` in browsers, timer-based scheduling elsewhere. Resolution happens at call time — not import time — so the core never touches browser APIs merely by being loaded (§2 principle 1).
+
+**Returns**
+
+- [`Scheduler`](/keyframe-flow/docs/scheduler)
+
+---
+
+# CssTransformElementLike
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/csstransformelementlike/
+
+<Signature
+  code="interface CssTransformElementLike {
+	style: { transform: string; transformOrigin?: string };
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/html-ts/#L9" label="html.ts:9" />
+
+The structural subset of an HTML element the adapter needs — any element with a CSS `style.transform` string works, and no DOM lib types are referenced so the core stays browser-API-free at import time (§2 principle 1).
+
+---
+
+## Properties
+
+<MemberHeading id="style" depth="3" name="style" sig="style: { transform: string; transformOrigin?: string }" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/targets/html-ts/#L14" sourceLabel="html.ts:14" />
+
+Inline style bag the adapter writes to. `transformOrigin` is optional — only touched when explicitly requested (§17.3).
+
+**Properties**
+
+- `transform` (string) — CSS `transform` property value; fully owned by the adapter (§17.3).
+- `transformOrigin` (string, optional) — CSS `transform-origin` property value, when supported (§17.3).
+
+---
+
+# DOMMatrixLike
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/dommatrixlike/
+
+<Signature
+  code="interface DOMMatrixLike {
+	m11: number;
+	m12: number;
+	m13: number;
+	m14: number;
+	m21: number;
+	m22: number;
+	m23: number;
+	m24: number;
+	m31: number;
+	m32: number;
+	m33: number;
+	m34: number;
+	m41: number;
+	m42: number;
+	m43: number;
+	m44: number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/types-d-ts/#L21" label="types.d.ts:21" />
+
+The named members shared by `DOMMatrixReadOnly` and `DOMMatrix`.
+
+CSSOM member names are transposed relative to conventional mathematical `m<row><column>` naming: `mXY` is the element at math row `Y − 1`, column `X − 1`. (`transformPoint` computes `x' = x·m11 + y·m21 + z·m31 + m41`, so the translation lives in `m41/m42/m43`.) See §15.2 — conversions must preserve mathematical meaning, not raw element order.
+
+---
+
+## Properties
+
+<MemberHeading id="m11" depth="3" name="m11" sig="m11: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L23" sourceLabel="types.d.ts:23" />
+
+CSSOM `m11` — math row 1, column 1 (basis image of x̂, x part).
+
+<MemberHeading id="m12" depth="3" name="m12" sig="m12: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L25" sourceLabel="types.d.ts:25" />
+
+CSSOM `m12` — math row 2, column 1 (basis image of x̂, y part).
+
+<MemberHeading id="m13" depth="3" name="m13" sig="m13: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L27" sourceLabel="types.d.ts:27" />
+
+CSSOM `m13` — math row 3, column 1 (basis image of x̂, z part).
+
+<MemberHeading id="m14" depth="3" name="m14" sig="m14: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L29" sourceLabel="types.d.ts:29" />
+
+CSSOM `m14` — math row 4, column 1 (x basis perspective term).
+
+<MemberHeading id="m21" depth="3" name="m21" sig="m21: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L31" sourceLabel="types.d.ts:31" />
+
+CSSOM `m21` — math row 1, column 2 (basis image of ŷ, x part).
+
+<MemberHeading id="m22" depth="3" name="m22" sig="m22: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L33" sourceLabel="types.d.ts:33" />
+
+CSSOM `m22` — math row 2, column 2 (basis image of ŷ, y part).
+
+<MemberHeading id="m23" depth="3" name="m23" sig="m23: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L35" sourceLabel="types.d.ts:35" />
+
+CSSOM `m23` — math row 3, column 2 (basis image of ŷ, z part).
+
+<MemberHeading id="m24" depth="3" name="m24" sig="m24: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L37" sourceLabel="types.d.ts:37" />
+
+CSSOM `m24` — math row 4, column 2 (y basis perspective term).
+
+<MemberHeading id="m31" depth="3" name="m31" sig="m31: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L39" sourceLabel="types.d.ts:39" />
+
+CSSOM `m31` — math row 1, column 3 (basis image of ẑ, x part).
+
+<MemberHeading id="m32" depth="3" name="m32" sig="m32: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L41" sourceLabel="types.d.ts:41" />
+
+CSSOM `m32` — math row 2, column 3 (basis image of ẑ, y part).
+
+<MemberHeading id="m33" depth="3" name="m33" sig="m33: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L43" sourceLabel="types.d.ts:43" />
+
+CSSOM `m33` — math row 3, column 3 (basis image of ẑ, z part).
+
+<MemberHeading id="m34" depth="3" name="m34" sig="m34: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L45" sourceLabel="types.d.ts:45" />
+
+CSSOM `m34` — math row 4, column 3 (z basis perspective term).
+
+<MemberHeading id="m41" depth="3" name="m41" sig="m41: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L47" sourceLabel="types.d.ts:47" />
+
+CSSOM `m41` — math row 1, column 4: translation x.
+
+<MemberHeading id="m42" depth="3" name="m42" sig="m42: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L49" sourceLabel="types.d.ts:49" />
+
+CSSOM `m42` — math row 2, column 4: translation y.
+
+<MemberHeading id="m43" depth="3" name="m43" sig="m43: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L51" sourceLabel="types.d.ts:51" />
+
+CSSOM `m43` — math row 3, column 4: translation z.
+
+<MemberHeading id="m44" depth="3" name="m44" sig="m44: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L53" sourceLabel="types.d.ts:53" />
+
+CSSOM `m44` — math row 4, column 4: homogeneous coordinate (usually 1).
+
+---
+
+# DOMMatrixWritable
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/dommatrixwritable/
+
+<Signature
+  code="interface DOMMatrixWritable extends DOMMatrixLike {
+	a: number;
+	b: number;
+	c: number;
+	d: number;
+	e: number;
+	f: number;
+	is2D: boolean;
+	isIdentity: boolean;
+	m11: number;
+	m12: number;
+	m13: number;
+	m14: number;
+	m21: number;
+	m22: number;
+	m23: number;
+	m24: number;
+	m31: number;
+	m32: number;
+	m33: number;
+	m34: number;
+	m41: number;
+	m42: number;
+	m43: number;
+	m44: number;
+	multiply(other: DOMMatrixLike): DOMMatrixWritable;
+	toFloat32Array(): Float32Array;
+	toFloat64Array(): Float64Array;
+	transformPoint(point: DOMPointInput): DOMPointOutput;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/types-d-ts/#L81" label="types.d.ts:81" />
+
+A mutable `DOMMatrix` instance with the subset of members used here.
+
+#### Hierarchy
+
+- [`DOMMatrixLike`](/keyframe-flow/docs/dommatrixlike)
+- `DOMMatrixWritable`
+
+---
+
+## Properties
+
+<MemberHeading id="a" depth="3" name="a" sig="a: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L121" sourceLabel="types.d.ts:121" />
+
+Short alias for `m11` — 2D affine scale-x (§17).
+
+<MemberHeading id="b" depth="3" name="b" sig="b: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L123" sourceLabel="types.d.ts:123" />
+
+Short alias for `m12` — 2D affine skew/skew-y component.
+
+<MemberHeading id="c" depth="3" name="c" sig="c: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L125" sourceLabel="types.d.ts:125" />
+
+Short alias for `m21` — 2D affine skew/skew-x component.
+
+<MemberHeading id="d" depth="3" name="d" sig="d: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L127" sourceLabel="types.d.ts:127" />
+
+Short alias for `m22` — 2D affine scale-y (§17).
+
+<MemberHeading id="e" depth="3" name="e" sig="e: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L129" sourceLabel="types.d.ts:129" />
+
+Short alias for `m41` — 2D affine translation x.
+
+<MemberHeading id="f" depth="3" name="f" sig="f: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L131" sourceLabel="types.d.ts:131" />
+
+Short alias for `m42` — 2D affine translation y.
+
+<MemberHeading id="is2d" depth="3" name="is2D" sig="is2D: boolean" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L116" sourceLabel="types.d.ts:116" />
+
+True when every perspective-related entry is at its identity value.
+
+<MemberHeading id="isidentity" depth="3" name="isIdentity" sig="isIdentity: boolean" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/types-d-ts/#L118" sourceLabel="types.d.ts:118" />
+
+True when the matrix is exactly the identity.
+
+<MemberHeading id="m11" depth="3" name="m11" sig="m11: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L83" sourceLabel="types.d.ts:83" />
+
+_Overrides&#x20;_[`m11`](/keyframe-flow/docs/dommatrixlike#m11)
+
+CSSOM `m11` — math row 1, column 1 (writable).
+
+<MemberHeading id="m12" depth="3" name="m12" sig="m12: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L85" sourceLabel="types.d.ts:85" />
+
+_Overrides&#x20;_[`m12`](/keyframe-flow/docs/dommatrixlike#m12)
+
+CSSOM `m12` — math row 2, column 1 (writable).
+
+<MemberHeading id="m13" depth="3" name="m13" sig="m13: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L87" sourceLabel="types.d.ts:87" />
+
+_Overrides&#x20;_[`m13`](/keyframe-flow/docs/dommatrixlike#m13)
+
+CSSOM `m13` — math row 3, column 1 (writable).
+
+<MemberHeading id="m14" depth="3" name="m14" sig="m14: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L89" sourceLabel="types.d.ts:89" />
+
+_Overrides&#x20;_[`m14`](/keyframe-flow/docs/dommatrixlike#m14)
+
+CSSOM `m14` — math row 4, column 1 (writable).
+
+<MemberHeading id="m21" depth="3" name="m21" sig="m21: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L91" sourceLabel="types.d.ts:91" />
+
+_Overrides&#x20;_[`m21`](/keyframe-flow/docs/dommatrixlike#m21)
+
+CSSOM `m21` — math row 1, column 2 (writable).
+
+<MemberHeading id="m22" depth="3" name="m22" sig="m22: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L93" sourceLabel="types.d.ts:93" />
+
+_Overrides&#x20;_[`m22`](/keyframe-flow/docs/dommatrixlike#m22)
+
+CSSOM `m22` — math row 2, column 2 (writable).
+
+<MemberHeading id="m23" depth="3" name="m23" sig="m23: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L95" sourceLabel="types.d.ts:95" />
+
+_Overrides&#x20;_[`m23`](/keyframe-flow/docs/dommatrixlike#m23)
+
+CSSOM `m23` — math row 3, column 2 (writable).
+
+<MemberHeading id="m24" depth="3" name="m24" sig="m24: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L97" sourceLabel="types.d.ts:97" />
+
+_Overrides&#x20;_[`m24`](/keyframe-flow/docs/dommatrixlike#m24)
+
+CSSOM `m24` — math row 4, column 2 (writable).
+
+<MemberHeading id="m31" depth="3" name="m31" sig="m31: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L99" sourceLabel="types.d.ts:99" />
+
+_Overrides&#x20;_[`m31`](/keyframe-flow/docs/dommatrixlike#m31)
+
+CSSOM `m31` — math row 1, column 3 (writable).
+
+<MemberHeading id="m32" depth="3" name="m32" sig="m32: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L101" sourceLabel="types.d.ts:101" />
+
+_Overrides&#x20;_[`m32`](/keyframe-flow/docs/dommatrixlike#m32)
+
+CSSOM `m32` — math row 2, column 3 (writable).
+
+<MemberHeading id="m33" depth="3" name="m33" sig="m33: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L103" sourceLabel="types.d.ts:103" />
+
+_Overrides&#x20;_[`m33`](/keyframe-flow/docs/dommatrixlike#m33)
+
+CSSOM `m33` — math row 3, column 3 (writable).
+
+<MemberHeading id="m34" depth="3" name="m34" sig="m34: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L105" sourceLabel="types.d.ts:105" />
+
+_Overrides&#x20;_[`m34`](/keyframe-flow/docs/dommatrixlike#m34)
+
+CSSOM `m34` — math row 4, column 3 (writable).
+
+<MemberHeading id="m41" depth="3" name="m41" sig="m41: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L107" sourceLabel="types.d.ts:107" />
+
+_Overrides&#x20;_[`m41`](/keyframe-flow/docs/dommatrixlike#m41)
+
+CSSOM `m41` — translation x (writable).
+
+<MemberHeading id="m42" depth="3" name="m42" sig="m42: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L109" sourceLabel="types.d.ts:109" />
+
+_Overrides&#x20;_[`m42`](/keyframe-flow/docs/dommatrixlike#m42)
+
+CSSOM `m42` — translation y (writable).
+
+<MemberHeading id="m43" depth="3" name="m43" sig="m43: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L111" sourceLabel="types.d.ts:111" />
+
+_Overrides&#x20;_[`m43`](/keyframe-flow/docs/dommatrixlike#m43)
+
+CSSOM `m43` — translation z (writable).
+
+<MemberHeading id="m44" depth="3" name="m44" sig="m44: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L113" sourceLabel="types.d.ts:113" />
+
+_Overrides&#x20;_[`m44`](/keyframe-flow/docs/dommatrixlike#m44)
+
+CSSOM `m44` — homogeneous coordinate (writable).
+
+## Methods
+
+<MemberHeading id="multiply" depth="3" name="multiply" sig="multiply(other: DOMMatrixLike): DOMMatrixWritable" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L134" sourceLabel="types.d.ts:134" />
+
+Returns `this × other` as a new matrix (CSSOM order).
+
+**Parameters**
+
+- `other` ([DOMMatrixLike](/keyframe-flow/docs/dommatrixlike))
+
+**Returns**
+
+- [`DOMMatrixWritable`](/keyframe-flow/docs/dommatrixwritable)
+
+<MemberHeading id="tofloat32array" depth="3" name="toFloat32Array" sig="toFloat32Array(): Float32Array" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L140" sourceLabel="types.d.ts:140" />
+
+The 16 entries in CSSOM array order (`a11, a12, …` row-major text).
+
+**Returns**
+
+- `Float32Array`
+
+<MemberHeading id="tofloat64array" depth="3" name="toFloat64Array" sig="toFloat64Array(): Float64Array" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L143" sourceLabel="types.d.ts:143" />
+
+The 16 entries in CSSOM array order, double precision.
+
+**Returns**
+
+- `Float64Array`
+
+<MemberHeading id="transformpoint" depth="3" name="transformPoint" sig="transformPoint(point: DOMPointInput): DOMPointOutput" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L137" sourceLabel="types.d.ts:137" />
+
+Applies the transform to `point`, returning a new point.
+
+**Parameters**
+
+- `point` ([DOMPointInput](/keyframe-flow/docs/dompointinput))
+
+**Returns**
+
+- [`DOMPointOutput`](/keyframe-flow/docs/dompointoutput)
+
+---
+
+# DOMPointInput
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/dompointinput/
+
+<Signature
+  code="interface DOMPointInput {
+	w?: number;
+	x: number;
+	y: number;
+	z?: number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/types-d-ts/#L57" label="types.d.ts:57" />
+
+Input point for `DOMMatrixWritable#transformPoint`.
+
+---
+
+## Properties
+
+<MemberHeading id="w" depth="3" name="w" sig="w: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L65" sourceLabel="types.d.ts:65" />
+
+Homogeneous coordinate; defaults to 1.
+
+<MemberHeading id="x" depth="3" name="x" sig="x: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L59" sourceLabel="types.d.ts:59" />
+
+X coordinate.
+
+<MemberHeading id="y" depth="3" name="y" sig="y: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L61" sourceLabel="types.d.ts:61" />
+
+Y coordinate.
+
+<MemberHeading id="z" depth="3" name="z" sig="z: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L63" sourceLabel="types.d.ts:63" />
+
+Z coordinate; defaults to 0.
+
+---
+
+# DOMPointOutput
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/dompointoutput/
+
+<Signature
+  code="interface DOMPointOutput {
+	w: number;
+	x: number;
+	y: number;
+	z: number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/types-d-ts/#L69" label="types.d.ts:69" />
+
+Point produced by `DOMMatrixWritable#transformPoint`.
+
+---
+
+## Properties
+
+<MemberHeading id="w" depth="3" name="w" sig="w: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L77" sourceLabel="types.d.ts:77" />
+
+Homogeneous coordinate of the result.
+
+<MemberHeading id="x" depth="3" name="x" sig="x: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L71" sourceLabel="types.d.ts:71" />
+
+Transformed X (perspective-divided when `w ≠ 1`).
+
+<MemberHeading id="y" depth="3" name="y" sig="y: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L73" sourceLabel="types.d.ts:73" />
+
+Transformed Y.
+
+<MemberHeading id="z" depth="3" name="z" sig="z: number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/types-d-ts/#L75" sourceLabel="types.d.ts:75" />
+
+Transformed Z.
+
+---
+
+# Easing
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/easing/
+
+<Signature code="Easing = EasingName | EasingFunction" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/easing-ts/#L146" label="easing.ts:146" />
+
+Any easing: a built-in name or a custom function. Custom easings need no global registration (§8).
+
+---
+
+# EasingFunction
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/easingfunction/
+
+<Signature code="EasingFunction = (progress: number) => number" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/easing-ts/#L6" label="easing.ts:6" />
+
+Custom easing function (§8): maps normalized progress in `[0, 1]` to an eased value. Values outside `[0, 1]` are permitted (overshoot) but must be finite; non-finite results throw at sampling time.
+
+**Parameters**
+
+- `progress` (number)
+
+**Returns**
+
+- `number`
+
+---
+
+# EasingName
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/easingname/
+
+<Signature code="EasingName = 'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'ease-in-sine' | 'ease-out-sine' | 'ease-in-out-sine' | 'ease-in-quad' | 'ease-out-quad' | 'ease-in-out-quad' | 'ease-in-cubic' | 'ease-out-cubic' | 'ease-in-out-cubic' | 'ease-in-quart' | 'ease-out-quart' | 'ease-in-out-quart' | 'ease-in-quint' | 'ease-out-quint' | 'ease-in-out-quint' | 'ease-in-expo' | 'ease-out-expo' | 'ease-in-out-expo' | 'ease-in-circ' | 'ease-out-circ' | 'ease-in-out-circ'" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/easing-ts/#L114" label="easing.ts:114" />
+
+A built-in easing name such as `"linear"` or `"ease-in-out-cubic"` (§8).
+
+---
+
+# EngineTickable
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/enginetickable/
+
+<Signature
+  code="interface EngineTickable {
+	onEngineUpdate(timeMs: number): void;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/playback/engine-ts/#L11" label="engine.ts:11" />
+
+The minimal contract the engine needs from a playback instance. Playback instances implement it; keeping it structural avoids a runtime import cycle between the engine and playback modules.
+
+---
+
+## Methods
+
+<MemberHeading id="onengineupdate" depth="3" name="onEngineUpdate" sig="onEngineUpdate(timeMs: number): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L13" sourceLabel="engine.ts:13" />
+
+Called by the engine with the current clock timestamp in ms (§16).
+
+**Parameters**
+
+- `timeMs` (number)
+
+**Returns**
+
+- `void`
+
+---
+
+# EulerAngles
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/eulerangles/
+
+<Signature code="EulerAngles = readonly [number, number, number]" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/interpolation-ts/#L70" label="interpolation.ts:70" />
+
+Euler angle triples in radians, X → Y → Z (§4.3).
+
+---
+
+# getDefaultEngine
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/getdefaultengine/
+
+<Signature code="getDefaultEngine(): PlaybackEngine" />
+
+<SourceLink href="/keyframe-flow/docs/source/playback/engine-ts/#L121" label="engine.ts:121" />
+
+The lazily created shared `PlaybackEngine` used by playbacks that do not inject their own. It combines `systemClock` with the default frame scheduler (`requestAnimationFrame` in browsers, timer-based elsewhere). Resolution is deferred to first use so importing the library never touches browser APIs (§2 principle 1).
+
+**Returns**
+
+- [`PlaybackEngine`](/keyframe-flow/docs/playbackengine)
+
+---
+
+# GroupLayout
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/grouplayout/
+
+<Signature code="GroupLayout = 'sequence' | 'parallel'" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L75" label="animation.ts:75" />
+
+Layout modes for `Animation.group` (§14, §19).
+
+---
+
+# HtmlTargetOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/htmltargetoptions/
+
+<Signature
+  code="interface HtmlTargetOptions {
+	transformOrigin?: string;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/html-ts/#L23" label="html.ts:23" />
+
+Options for `html`.
+
+---
+
+## Properties
+
+<MemberHeading id="transformorigin" depth="3" name="transformOrigin" sig="transformOrigin: string" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/targets/html-ts/#L30" sourceLabel="html.ts:30" />
+
+Optional `transform-origin` to apply once when the adapter is created. When omitted the element keeps whatever origin CSS already gives it — usually `50% 50%`. Because the library's matrices are origin-agnostic, set an explicit origin (e.g. `"0 0"`) when matching other renderers.
+
+---
+
+# Keyframe
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/keyframe/
+
+<Signature
+  code="interface Keyframe<T> {
+	at: number;
+	value: T;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/animation/keyframes-ts/#L10" label="keyframes.ts:10" />
+
+A generic keyframe: a value attached to a normalized position (§6.1). `at` is progress in `[0, 1]`, independent of duration (§6.2).
+
+**Type Parameters**
+
+- `T`
+
+---
+
+## Properties
+
+<MemberHeading id="at" depth="3" name="at" sig="at: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L12" sourceLabel="keyframes.ts:12" />
+
+Normalized timeline position in `[0, 1]` (§6.1).
+
+<MemberHeading id="value" depth="3" name="value" sig="value: T" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L14" sourceLabel="keyframes.ts:14" />
+
+The value reached at this keyframe.
+
+---
+
+# ManualClock
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/manualclock/
+
+<SourceLink href="/keyframe-flow/docs/source/timing/clock-ts/#L38" label="clock.ts:38" />
+
+A clock whose time only moves when a test or host says so (§16). Ideal for deterministic playback tests: animation time is timestamp-based, never frame-count-based (§16), and this makes every timestamp explicit.
+
+```ts
+const clock = new ManualClock(0);
+clock.advance(16); // clock.now() === 16
+clock.set(5000);   // clock.now() === 5000
+```
+
+---
+
+## Constructors
+
+<MemberHeading id="constructor" depth="3" name="constructor" sig="new ManualClock(start: number): ManualClock" />
+
+**Parameters**
+
+- `start` (number, default: `0`)
+
+**Returns**
+
+`ManualClock`
+
+#### Implements
+
+- [`Clock`](/keyframe-flow/docs/clock)
+
+---
+
+## Methods
+
+<MemberHeading id="advance" depth="3" name="advance" sig="advance(deltaMs: number): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/clock-ts/#L62" sourceLabel="clock.ts:62" />
+
+Moves the clock forward (or back) by `deltaMs` milliseconds.
+
+**Parameters**
+
+- `deltaMs` (number)
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="now" depth="3" name="now" sig="now(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/clock-ts/#L49" sourceLabel="clock.ts:49" />
+
+_Implementation of&#x20;_[`now`](/keyframe-flow/docs/clock#now)
+
+Current time in milliseconds, from an arbitrary but stable origin.
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="set" depth="3" name="set" sig="set(timeMs: number): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/clock-ts/#L54" sourceLabel="clock.ts:54" />
+
+Jumps the clock to an absolute timestamp in milliseconds.
+
+**Parameters**
+
+- `timeMs` (number)
+
+**Returns**
+
+- `void`
+
+---
+
+# ManualScheduler
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/manualscheduler/
+
+<SourceLink href="/keyframe-flow/docs/source/timing/scheduler-ts/#L100" label="scheduler.ts:100" />
+
+A scheduler that only fires frames when a test or host calls `ManualScheduler.tick` (§16). Pair it with `ManualClock` for fully deterministic playback tests.
+
+```ts
+const clock = new ManualClock(0);
+const scheduler = new ManualScheduler();
+const engine = new PlaybackEngine({ clock, scheduler });
+// ...start a playback...
+clock.advance(16);
+scheduler.tick(clock.now()); // drives exactly one engine update
+```
+
+---
+
+## Constructors
+
+<MemberHeading id="constructor" depth="3" name="constructor" sig="new ManualScheduler(): ManualScheduler" />
+
+**Returns**
+
+`ManualScheduler`
+
+#### Implements
+
+- [`Scheduler`](/keyframe-flow/docs/scheduler)
+
+---
+
+## Accessors
+
+<MemberHeading id="haspending" depth="3" name="hasPending" sig="get hasPending(): boolean" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/scheduler-ts/#L117" sourceLabel="scheduler.ts:117" />
+
+`true` while at least one requested frame is waiting to fire.
+
+<MemberHeading id="pendingcount" depth="3" name="pendingCount" sig="get pendingCount(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/scheduler-ts/#L122" sourceLabel="scheduler.ts:122" />
+
+The number of requested frames waiting to fire.
+
+## Methods
+
+<MemberHeading id="cancel" depth="3" name="cancel" sig="cancel(handle: unknown): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/scheduler-ts/#L110" sourceLabel="scheduler.ts:110" />
+
+_Implementation of&#x20;_[`cancel`](/keyframe-flow/docs/scheduler#cancel)
+
+Cancels a previously requested callback that has not fired yet.
+
+**Parameters**
+
+- `handle` (unknown)
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="request" depth="3" name="request" sig="request(callback: (time: number) => void): unknown" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/scheduler-ts/#L104" sourceLabel="scheduler.ts:104" />
+
+_Implementation of&#x20;_[`request`](/keyframe-flow/docs/scheduler#request)
+
+Schedules `callback` for the next frame; returns a cancelable handle.
+
+**Parameters**
+
+- `callback` ((time: number) => void)
+
+**Returns**
+
+- `unknown`
+
+<MemberHeading id="tick" depth="3" name="tick" sig="tick(time: number): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/scheduler-ts/#L131" sourceLabel="scheduler.ts:131" />
+
+Fires every pending callback once, in request order, with `time` (the scheduler's own view of the frame timestamp). Requests are one-shot like `requestAnimationFrame`: each must re-request for the next tick.
+
+**Parameters**
+
+- `time` (number)
+
+**Returns**
+
+- `void`
+
+---
+
+# matrix
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/matrix/
+
+<Signature
+  code="matrix: {
+	DOMMatrixConstructor: (() => DOMMatrixWritable) | undefined;
+	from;
+	fromDOMMatrix;
+	fromTRS;
+	identity;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/matrix/index-ts/#L31" label="index.ts:31" />
+
+Portable matrix entry points (§15).
+
+```ts
+const a = matrix.from([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 10, 0, 0, 1]);
+const b = matrix.from(domMatrix);
+const result = a.multiply(b);
+```
+
+**Properties**
+
+- `DOMMatrixConstructor` ((() => [DOMMatrixWritable](/keyframe-flow/docs/dommatrixwritable)) | undefined)
+- `from`
+- `fromDOMMatrix`
+- `fromTRS`
+- `identity`
+
+---
+
+# Matrix4
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/matrix4/
+
+<SourceLink href="/keyframe-flow/docs/source/matrix/matrix4-ts/#L32" label="matrix4.ts:32" />
+
+The library's portable, canonical 4×4 matrix (§3.4, §15).
+
+Conventions (§4.4): right-handed coordinates, column vectors, column-major storage, radians for angular values. Element `(row r, column c)` lives at index `c × 4 + r`, so the translation components sit at indices 12, 13, 14 — matching WebGL/GLSL and `DOMMatrix`'s column-major array layout (§15.2).
+
+Instances are immutable; every operation returns a new matrix (§4.2).
+
+**Example**
+
+```ts
+import { matrix, Quaternion } from "keyframe-flow";
+
+const m = matrix.fromTRS({ position: [10, 0, 0], rotation: Quaternion.identity() });
+m.el(12); // 10 — translation x at column-major index 12 (§15)
+```
+
+---
+
+## Constructors
+
+<MemberHeading id="constructor" depth="3" name="constructor" sig="new Matrix4(values?: ArrayLike<number>): Matrix4" />
+
+**Parameters**
+
+- `values` (ArrayLike\<number>, optional)
+
+**Returns**
+
+`Matrix4`
+
+---
+
+## Methods
+
+<MemberHeading id="applytopoint" depth="3" name="applyToPoint" sig="applyToPoint(point: Vector3Like): Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L420" sourceLabel="matrix4.ts:420" />
+
+Applies the matrix to a point (implicit w = 1).
+
+**Parameters**
+
+- `point` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="applytovector" depth="3" name="applyToVector" sig="applyToVector(vector: Vector3Like): Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L430" sourceLabel="matrix4.ts:430" />
+
+Applies the rotation/scale part to a direction vector (implicit w = 0).
+
+**Parameters**
+
+- `vector` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="at" depth="3" name="at" sig="at(row: number, column: number): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L178" sourceLabel="matrix4.ts:178" />
+
+Reads the element at `(row, column)`.
+
+**Parameters**
+
+- `row` (number)
+- `column` (number)
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="decompose" depth="3" name="decompose" sig="decompose(): TransformComponents" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L342" sourceLabel="matrix4.ts:342" />
+
+Extracts `{ position, rotation, scale }` from this matrix when it is mathematically decomposable into ordinary TRS components (§15.1).
+
+Throws explicitly for matrices containing shear, reflection, perspective, or singular components instead of silently approximating them (§9.2).
+
+**Returns**
+
+- [`TransformComponents`](/keyframe-flow/docs/transformcomponents)
+
+<MemberHeading id="el" depth="3" name="el" sig="el(index: number): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L189" sourceLabel="matrix4.ts:189" />
+
+Reads the raw element at a column-major storage index (§15): `el(0..3)` is the first column, and `el(12)`, `el(13)`, `el(14)` are the translation x/y/z. This is the layout CSS `matrix3d()`, `gl.uniformMatrix4fv`, and `queue.writeBuffer` uploads expect; see also [Matrix4#at](/keyframe-flow/docs/matrix4#at) for `(row, column)` access.
+
+**Parameters**
+
+- `index` (number)
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="equals" depth="3" name="equals" sig="equals(other: Matrix4, epsilon: number): boolean" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L440" sourceLabel="matrix4.ts:440" />
+
+Element-wise comparison within `epsilon`.
+
+**Parameters**
+
+- `other` ([Matrix4](/keyframe-flow/docs/matrix4))
+- `epsilon` (number, default: `0`)
+
+**Returns**
+
+- `boolean`
+
+<MemberHeading id="invert" depth="3" name="invert" sig="invert(): Matrix4" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L219" sourceLabel="matrix4.ts:219" />
+
+Returns the inverse matrix. Throws when the matrix is singular, rather than producing approximate values (§9.2).
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+<MemberHeading id="lerp" depth="3" name="lerp" sig="lerp(other: Matrix4, t: number): Matrix4" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L458" sourceLabel="matrix4.ts:458" />
+
+Raw element-wise linear interpolation between two matrices — an explicit advanced escape hatch (§9.2), never the default transform interpolation. The result is generally not TRS-decomposable (interpolated rotations gain shear); decompose it only when the inputs justify it, and accept the explicit throw otherwise. See `Animation`'s `interpolation: "raw-matrix"` option for animation-level use.
+
+**Parameters**
+
+- `other` ([Matrix4](/keyframe-flow/docs/matrix4))
+- `t` (number)
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+<MemberHeading id="multiply" depth="3" name="multiply" sig="multiply(other: Matrix4): Matrix4" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L198" sourceLabel="matrix4.ts:198" />
+
+Matrix product `this × other` in conventional mathematical notation with column vectors (§4.4): the composed transform applies `other` first, then `this`. Neither operand is modified.
+
+**Parameters**
+
+- `other` ([Matrix4](/keyframe-flow/docs/matrix4))
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+<MemberHeading id="toarray" depth="3" name="toArray" sig="toArray(): number[]" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L87" sourceLabel="matrix4.ts:87" />
+
+Returns a column-major number-array copy.
+
+**Returns**
+
+- `number[]`
+
+<MemberHeading id="todommatrix" depth="3" name="toDOMMatrix" sig="toDOMMatrix(): DOMMatrixWritable" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L143" sourceLabel="matrix4.ts:143" />
+
+Converts to a native `DOMMatrix`, preserving mathematical meaning: the returned matrix applies the same transform to column vectors.
+
+Throws when the environment provides no `DOMMatrix` constructor — callers in browser-free environments should use `toFloat32Array()` or `toArray()`.
+
+**Returns**
+
+- [`DOMMatrixWritable`](/keyframe-flow/docs/dommatrixwritable)
+
+<MemberHeading id="tofloat32array" depth="3" name="toFloat32Array" sig="toFloat32Array(): Float32Array" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L82" sourceLabel="matrix4.ts:82" />
+
+Returns a column-major `Float32Array` copy (e.g. for GPU uploads).
+
+**Returns**
+
+- `Float32Array`
+
+## Static Methods
+
+<MemberHeading id="fromarray" depth="3" name="fromArray" sig="fromArray(values: ArrayLike<number>): Matrix4" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L68" sourceLabel="matrix4.ts:68" />
+
+Creates a matrix from 16 values in column-major order.
+
+**Parameters**
+
+- `values` (ArrayLike\<number>)
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+<MemberHeading id="fromdommatrix" depth="3" name="fromDOMMatrix" sig="fromDOMMatrix(other: DOMMatrixLike): Matrix4" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L104" sourceLabel="matrix4.ts:104" />
+
+Creates a matrix from anything exposing the named `DOMMatrix` members `m11`–`m44`. Conversions go through named members rather than raw array copies so mathematical meaning survives storage-order differences (§15.2).
+
+CSSOM names members as `m<column><row>` — the transpose of conventional mathematical `m<row><column>` naming. `DOMMatrix` transforms points as `x' = x·m11 + y·m21 + z·m31 + m41`, so member `mXY` corresponds to the element at math row `Y − 1`, column `X − 1`. Reading members in name order therefore yields exactly this library's column-major element order; "re-correcting" it would silently transpose the matrix.
+
+**Parameters**
+
+- `other` ([DOMMatrixLike](/keyframe-flow/docs/dommatrixlike))
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+<MemberHeading id="fromfloat32array" depth="3" name="fromFloat32Array" sig="fromFloat32Array(values: Float32Array): Matrix4" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L77" sourceLabel="matrix4.ts:77" />
+
+Creates a matrix from a `Float32Array` interpreted as column-major values. Precision may be reduced relative to the library's internal double precision; this is inherent to the source format (§15.2).
+
+**Parameters**
+
+- `values` (Float32Array)
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+<MemberHeading
+  id="fromtrs"
+  depth="3"
+  name="fromTRS"
+  sig="fromTRS(
+	position: Vector3Like,
+	rotation: Quaternion,
+	scale: Vector3Like,
+): Matrix4"
+/>
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L296" sourceLabel="matrix4.ts:296" />
+
+Composes position, rotation, and scale into the canonical matrix `T × R × S` (§3.3): a point is scaled first, then rotated, then translated.
+
+**Parameters**
+
+- `position` ([Vector3Like](/keyframe-flow/docs/vector3like))
+- `rotation` ([Quaternion](/keyframe-flow/docs/quaternion))
+- `scale` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+**Example**
+
+```ts
+const m = Matrix4.fromTRS([10, 20, 0], Quaternion.identity(), [2, 2, 2]);
+// Composes T × R × S — scale applies to the point first (§4.4).
+```
+
+<MemberHeading id="identity" depth="3" name="identity" sig="identity(): Matrix4" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L63" sourceLabel="matrix4.ts:63" />
+
+The identity matrix — multiplying by it changes nothing.
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+---
+
+# MatrixSource
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/matrixsource/
+
+<Signature code="MatrixSource = ArrayLike<number> | DOMMatrixLike" />
+
+<SourceLink href="/keyframe-flow/docs/source/matrix/index-ts/#L12" label="index.ts:12" />
+
+Sources accepted by `matrix.from()`.
+
+---
+
+# matrixToCssTransform
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/matrixtocsstransform/
+
+<Signature code="matrixToCssTransform(matrix: Matrix4): string" />
+
+<SourceLink href="/keyframe-flow/docs/source/targets/html-ts/#L49" label="html.ts:49" />
+
+Converts a `Matrix4` to a CSS `matrix3d()` value (§17). CSS lists all sixteen matrix elements in column-major order — exactly this library's storage layout (§4.4) — so the values pass through in storage order without transposition (§15.2).
+
+**Parameters**
+
+- `matrix` ([Matrix4](/keyframe-flow/docs/matrix4))
+
+**Returns**
+
+- `string`
+
+**Example**
+
+```ts
+matrixToCssTransform(Matrix4.identity()); // "matrix3d(1, 0, 0, 0, 0, 1, …)"
+```
+
+---
+
+# matrixToSvgTransform
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/matrixtosvgtransform/
+
+<Signature code="matrixToSvgTransform(matrix: Matrix4): string" />
+
+<SourceLink href="/keyframe-flow/docs/source/targets/svg-ts/#L33" label="svg.ts:33" />
+
+Converts a `Matrix4` to an SVG 1.1 `matrix(a, b, c, d, e, f)` transform value (§17). SVG's 2D affine form maps to the matrix's column vectors as `a = col₀.x, b = col₀.y, c = col₁.x, d = col₁.y, e = tx, f = ty`. Values are comma-separated so the same string is also valid CSS transform syntax.
+
+SVG 1.1 transform attributes are inherently 2D: Z-axis and perspective components cannot be expressed and are not applied by renderers — compose 2D transforms or flatten deliberately when targeting SVG (§17.3).
+
+**Parameters**
+
+- `matrix` ([Matrix4](/keyframe-flow/docs/matrix4))
+
+**Returns**
+
+- `string`
+
+**Example**
+
+```ts
+matrixToSvgTransform(Matrix4.identity()); // "matrix(1, 0, 0, 1, 0, 0)"
+```
+
+---
+
+# NormalizedKeyframe
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/normalizedkeyframe/
+
+<Signature
+  code="interface NormalizedKeyframe {
+	at: number;
+	easing?: EasingFunction;
+	rotationAngles?: readonly [number, number, number];
+	transform: Transform;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/animation/keyframes-ts/#L41" label="keyframes.ts:41" />
+
+A keyframe after eager normalization (§5.5): transforms are coerced to `Transform` instances and named easings are resolved to functions once, so every playback instance shares identical, pre-validated timeline data.
+
+`rotationAngles` carries authored Euler angles in radians (X→Y→Z) when the definition opted into angular rotation tracks (§9.1, T35). Quaternion-only authored values are decomposed instead; a quaternion alone cannot express full revolutions, which is exactly what captured angles preserve.
+
+---
+
+## Properties
+
+<MemberHeading id="at" depth="3" name="at" sig="at: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L43" sourceLabel="keyframes.ts:43" />
+
+Normalized timeline position in `[0, 1]` (§6.1).
+
+<MemberHeading id="easing" depth="3" name="easing" sig="easing: EasingFunction" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L47" sourceLabel="keyframes.ts:47" />
+
+Resolved segment easing, or `undefined` to use the animation default (§8).
+
+<MemberHeading id="rotationangles" depth="3" name="rotationAngles" sig="rotationAngles: readonly [number, number, number]" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L49" sourceLabel="keyframes.ts:49" />
+
+Authored Euler angles in radians for angular rotation tracks (§9.1).
+
+<MemberHeading id="transform" depth="3" name="transform" sig="transform: Transform" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L45" sourceLabel="keyframes.ts:45" />
+
+Fully coerced transform — partial authoring inputs are merged away (§7).
+
+---
+
+# Playback
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playback/
+
+<SourceLink href="/keyframe-flow/docs/source/playback/playback-ts/#L110" label="playback.ts:110" />
+
+An independent playback instance created by `Animation.attach` (§11). Definitions describe motion; playback instances execute it (Appendix B.1): every instance owns its execution state — time, direction, iteration, lifecycle — while sharing the definition's immutable normalized timeline. Playback without a target is fully supported for pure time control (§11).
+
+**Remarks**
+
+Time semantics: [Playback.currentTime](/keyframe-flow/docs/playback#currenttime) is elapsed animation time in milliseconds within the current iteration, always in `[0, duration]`. Time progression is timestamp-based via the engine's clock, never frame-count- based (§16), and playback-rate changes never introduce discontinuities because future deltas are simply scaled by the new rate.
+
+Repetition and direction (§13) are evaluated here — the animation definition and its keyframes are never duplicated. Concurrent playbacks on one target follow replacement semantics: the most recently started playback owns the target, and superseded playbacks are cancelled without additive composition (§14).
+
+**Example**
+
+```ts
+const playback = slide.attach(target.html(element), { iterations: "infinite" });
+playback.play();
+// later…
+playback.pause();
+playback.seek(0);
+playback.dispose();
+```
+
+---
+
+## Constructors
+
+<MemberHeading
+  id="constructor"
+  depth="3"
+  name="constructor"
+  sig="new Playback(
+	animation: Animation,
+	target?: RenderTarget,
+	options: PlaybackOptions,
+): Playback"
+/>
+
+**Parameters**
+
+- `animation` ([Animation](/keyframe-flow/docs/animation))
+- `target` ([RenderTarget](/keyframe-flow/docs/rendertarget), optional)
+- `options` ([PlaybackOptions](/keyframe-flow/docs/playbackoptions), default: `{}`)
+
+**Returns**
+
+`Playback`
+
+---
+
+## Properties
+
+<MemberHeading id="animation" depth="3" name="animation" sig="animation: Animation" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L112" sourceLabel="playback.ts:112" />
+
+The immutable definition being played (§11).
+
+<MemberHeading id="target" depth="3" name="target" sig="target: RenderTarget | undefined" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L115" sourceLabel="playback.ts:115" />
+
+The render target receiving evaluated transforms, if any (§11).
+
+## Accessors
+
+<MemberHeading id="currenttime" depth="3" name="currentTime" sig="get currentTime(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L179" sourceLabel="playback.ts:179" />
+
+Elapsed animation time in milliseconds within the current iteration, always clamped to `[0, duration]` (§11.1).
+
+<MemberHeading id="directionmode" depth="3" name="directionMode" sig="get directionMode(): PlaybackDirectionMode" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L201" sourceLabel="playback.ts:201" />
+
+The authored direction mode (§13).
+
+<MemberHeading id="finished" depth="3" name="finished" sig="get finished(): Promise<PlaybackResult>" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L191" sourceLabel="playback.ts:191" />
+
+The completion promise of the current run (§11.1). It resolves with `{ status: "finished" }` when all iterations complete naturally, or `{ status: "cancelled" }` on ordinary cancellation — never a rejection. Each run started by `play()` gets its own promise; awaiting this getter before any run settles waits for the next settlement of whatever run is current when read.
+
+<MemberHeading id="iterationcount" depth="3" name="iterationCount" sig="get iterationCount(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L211" sourceLabel="playback.ts:211" />
+
+The completed iterations of the current run (§13).
+
+<MemberHeading id="iterations" depth="3" name="iterations" sig="get iterations(): number | 'infinite'" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L196" sourceLabel="playback.ts:196" />
+
+Configured total iterations, including the initial one (§13).
+
+<MemberHeading id="playbackrate" depth="3" name="playbackRate" sig="get playbackRate(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L221" sourceLabel="playback.ts:221" />
+
+The playback rate multiplier (§11.1, §16). Any finite number is accepted: `2` plays twice as fast, `-1` runs backwards, `0` holds time. Changing the rate never jumps animation time — only future elapsed-time deltas are scaled relative to the current timestamp (§12, §16).
+
+<MemberHeading id="reversed" depth="3" name="reversed" sig="get reversed(): boolean" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L206" sourceLabel="playback.ts:206" />
+
+Whether the current iteration runs backwards, after any `reverse()` calls.
+
+<MemberHeading id="state" depth="3" name="state" sig="get state(): PlaybackState" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L171" sourceLabel="playback.ts:171" />
+
+The current lifecycle state (§12).
+
+## Methods
+
+<MemberHeading id="cancel" depth="3" name="cancel" sig="cancel(): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L350" sourceLabel="playback.ts:350" />
+
+Stops playback and resolves the run's promise with `{ status: "cancelled" }` (§12). The last rendered transform is retained — cancellation does not attempt to restore an unknown original target transform. Cancellation and natural completion are separate outcomes; a finished or already-cancelled instance ignores this call.
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="dispose" depth="3" name="dispose" sig="dispose(): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L367" sourceLabel="playback.ts:367" />
+
+Permanently releases playback resources (§12): unregisters from the engine, releases target ownership, invokes the adapter's optional `dispose` cleanup hook (§17.1) — never destroying the underlying DOM element, canvas context, or graphics resource (Appendix B.8) — and settles any pending `finished` promise as cancelled so awaiting code cannot hang. Idempotent; every other operation on a disposed instance throws (§12).
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="onengineupdate" depth="3" name="onEngineUpdate" sig="onEngineUpdate(timeMs: number): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L389" sourceLabel="playback.ts:389" />
+
+Called by the `PlaybackEngine` with the current clock timestamp. Advances time by the elapsed wall-clock delta scaled by `playbackRate` and the iteration direction — timestamp-based, never frame-count-based (§16).
+
+**Parameters**
+
+- `timeMs` (number)
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="pause" depth="3" name="pause" sig="pause(): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L297" sourceLabel="playback.ts:297" />
+
+Stops time advancement while retaining playback state and time (§12). A later `play()` resumes from the retained time. No-op unless running.
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="play" depth="3" name="play" sig="play(): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L251" sourceLabel="playback.ts:251" />
+
+Starts or resumes playback (§12). Resuming a paused instance continues at the retained time; starting from `idle`, `finished`, or `cancelled` begins a new run from the beginning of the timeline in the current direction (§12) with its own `Playback.finished` promise. Starting (or resuming) takes target ownership, superseding any other playback on the same target (§14).
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="reverse" depth="3" name="reverse" sig="reverse(): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L310" sourceLabel="playback.ts:310" />
+
+Changes playback direction (§12, §13). Time is retained and continues in the new direction from wherever it currently sits. The changed direction is also the direction a restarted run uses — `play()` after finishing restarts "in current direction" (§12).
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="seek" depth="3" name="seek" sig="seek(timeMs: number): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L321" sourceLabel="playback.ts:321" />
+
+Sets elapsed animation time within the current iteration, in milliseconds (§12). Out-of-range times clamp to `[0, duration]`. Seeking immediately re-evaluates and submits the transform to the target when one is attached, without changing playback state.
+
+**Parameters**
+
+- `timeMs` (number)
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="seekprogress" depth="3" name="seekProgress" sig="seekProgress(progress: number): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L335" sourceLabel="playback.ts:335" />
+
+Sets normalized animation progress in `[0, 1]` within the current iteration (§12), equivalent to `seek(progress × duration)`. Out-of-range progress clamps to the boundaries.
+
+**Parameters**
+
+- `progress` (number)
+
+**Returns**
+
+- `void`
+
+---
+
+# PlaybackCancelledResult
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackcancelledresult/
+
+<Signature
+  code="interface PlaybackCancelledResult {
+	status: 'cancelled';
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/playback/playback-ts/#L19" label="playback.ts:19" />
+
+The run was cancelled (superseded, `cancel()`, or disposal) before finishing (§12).
+
+---
+
+## Properties
+
+<MemberHeading id="status" depth="3" name="status" sig="status: 'cancelled'" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L21" sourceLabel="playback.ts:21" />
+
+Cancellation status discriminator.
+
+---
+
+# PlaybackDirectionMode
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackdirectionmode/
+
+<Signature code="PlaybackDirectionMode = 'normal' | 'reverse' | 'alternate' | 'alternate-reverse'" />
+
+<SourceLink href="/keyframe-flow/docs/source/playback/playback-ts/#L32" label="playback.ts:32" />
+
+How playback direction behaves between iterations (§13). `alternate` and `alternate-reverse` flip direction every iteration; `normal` and `reverse` keep one direction for the whole run.
+
+---
+
+# PlaybackEngine
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackengine/
+
+<SourceLink href="/keyframe-flow/docs/source/playback/engine-ts/#L39" label="engine.ts:39" />
+
+The centralized playback scheduler (§16). One engine drives all active playback instances: it reads the current time from its injectable `Clock`, steps every registered playback, and requests the next frame from its injectable `Scheduler` only while at least one playback is active — so there are no unnecessary updates when nothing is playing (§16). Animation time is timestamp-based, never frame-count-based: each update advances playbacks by the elapsed clock time scaled by their playback rate. Custom clocks and schedulers integrate without modifying the core (§21).
+
+```ts
+const engine = new PlaybackEngine({ clock: myClock, scheduler: myScheduler });
+const playback = animation.attach(target, { engine });
+playback.play(); // driven by `engine` instead of the shared default
+```
+
+---
+
+## Constructors
+
+<MemberHeading
+  id="constructor"
+  depth="3"
+  name="constructor"
+  sig="new PlaybackEngine(
+	options: PlaybackEngineOptions,
+): PlaybackEngine"
+/>
+
+**Parameters**
+
+- `options` ([PlaybackEngineOptions](/keyframe-flow/docs/playbackengineoptions), default: `{}`)
+
+**Returns**
+
+`PlaybackEngine`
+
+---
+
+## Properties
+
+<MemberHeading id="clock" depth="3" name="clock" sig="clock: Clock" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L41" sourceLabel="engine.ts:41" />
+
+The time source this engine reads timestamps from.
+
+## Accessors
+
+<MemberHeading id="activecount" depth="3" name="activeCount" sig="get activeCount(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L53" sourceLabel="engine.ts:53" />
+
+The number of playback instances currently being driven.
+
+## Methods
+
+<MemberHeading id="add" depth="3" name="add" sig="add(playback: EngineTickable): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L58" sourceLabel="engine.ts:58" />
+
+Registers a running playback for updates, starting frames if needed.
+
+**Parameters**
+
+- `playback` ([EngineTickable](/keyframe-flow/docs/enginetickable))
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="remove" depth="3" name="remove" sig="remove(playback: EngineTickable): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L67" sourceLabel="engine.ts:67" />
+
+Removes a playback from the update set.
+
+**Parameters**
+
+- `playback` ([EngineTickable](/keyframe-flow/docs/enginetickable))
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="stop" depth="3" name="stop" sig="stop(): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L76" sourceLabel="engine.ts:76" />
+
+Stops scheduling entirely (pending frame cancelled, active set cleared). Used by hosts that want to shut an engine down; playbacks can re-register afterwards.
+
+**Returns**
+
+- `void`
+
+---
+
+# PlaybackEngineOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackengineoptions/
+
+<Signature
+  code="interface PlaybackEngineOptions {
+	clock?: Clock;
+	scheduler?: Scheduler;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/playback/engine-ts/#L17" label="engine.ts:17" />
+
+Injectable time sources for a `PlaybackEngine` (§16).
+
+---
+
+## Properties
+
+<MemberHeading id="clock" depth="3" name="clock" sig="clock: Clock" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L19" sourceLabel="engine.ts:19" />
+
+Time source. Defaults to `systemClock`.
+
+<MemberHeading id="scheduler" depth="3" name="scheduler" sig="scheduler: Scheduler" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/engine-ts/#L21" sourceLabel="engine.ts:21" />
+
+Frame callback source. Defaults to `createFrameScheduler()`.
+
+---
+
+# PlaybackFinishedResult
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackfinishedresult/
+
+<Signature
+  code="interface PlaybackFinishedResult {
+	status: 'finished';
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/playback/playback-ts/#L13" label="playback.ts:13" />
+
+The run reached its natural end (§12).
+
+---
+
+## Properties
+
+<MemberHeading id="status" depth="3" name="status" sig="status: 'finished'" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L15" sourceLabel="playback.ts:15" />
+
+Completion status discriminator.
+
+---
+
+# PlaybackOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackoptions/
+
+<Signature
+  code="interface PlaybackOptions {
+	autoplay?: boolean;
+	direction?: PlaybackDirectionMode;
+	engine?: PlaybackEngine;
+	iterations?: number | 'infinite';
+	playbackRate?: number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/playback/playback-ts/#L35" label="playback.ts:35" />
+
+Construction options for `Animation.attach` / `Playback`.
+
+---
+
+## Properties
+
+<MemberHeading id="autoplay" depth="3" name="autoplay" sig="autoplay: boolean" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L47" sourceLabel="playback.ts:47" />
+
+When `true`, start playing immediately on attach. Defaults to `false`.
+
+<MemberHeading id="direction" depth="3" name="direction" sig="direction: PlaybackDirectionMode" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L43" sourceLabel="playback.ts:43" />
+
+Direction behavior across iterations (§13). Defaults to `"normal"`.
+
+<MemberHeading id="engine" depth="3" name="engine" sig="engine: PlaybackEngine" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L49" sourceLabel="playback.ts:49" />
+
+Engine driving this playback. Defaults to the shared default engine.
+
+<MemberHeading id="iterations" depth="3" name="iterations" sig="iterations: number | 'infinite'" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L41" sourceLabel="playback.ts:41" />
+
+Total iterations including the initial one (§13): `1` (default) plays once, a finite integer ≥ 1 repeats, `"infinite"` never naturally completes.
+
+<MemberHeading id="playbackrate" depth="3" name="playbackRate" sig="playbackRate: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/playback/playback-ts/#L45" sourceLabel="playback.ts:45" />
+
+Initial playback rate (§11.1). Any finite number; defaults to `1`.
+
+---
+
+# PlaybackResult
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackresult/
+
+<Signature code="PlaybackResult = PlaybackFinishedResult | PlaybackCancelledResult" />
+
+<SourceLink href="/keyframe-flow/docs/source/playback/playback-ts/#L25" label="playback.ts:25" />
+
+Outcome delivered by the `finished` promise of a playback run (§12).
+
+---
+
+# PlaybackState
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/playbackstate/
+
+<Signature code="PlaybackState = 'idle' | 'running' | 'paused' | 'finished' | 'cancelled' | 'disposed'" />
+
+<SourceLink href="/keyframe-flow/docs/source/playback/playback-ts/#L6" label="playback.ts:6" />
+
+The lifecycle states of a playback instance (§12).
+
+---
+
+# projectToCanvas2D
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/projecttocanvas2d/
+
+<Signature
+  code="projectToCanvas2D(
+	matrix: Matrix4,
+	options?: Canvas2DTargetOptions,
+): readonly [number, number, number, number, number, number]"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/canvas-ts/#L66" label="canvas.ts:66" />
+
+Projects a `Matrix4` into Canvas 2D's affine form (§17.3). Canvas 2D is an inherently 2D affine API: the required projection step maps the transformed homogeneous images of the origin and the X/Y basis vectors through perspective division (and the optional camera at `perspective` distance), then fits the 2D affine that reproduces those screen positions. For purely affine inputs this reduces exactly to their 2D affine part; for matrices with Z or perspective components it produces the projected result rather than silently forwarding a raw 4×4 matrix, which Canvas cannot represent.
+
+**Parameters**
+
+- `matrix` ([Matrix4](/keyframe-flow/docs/matrix4))
+- `options` ([Canvas2DTargetOptions](/keyframe-flow/docs/canvas2dtargetoptions), optional)
+
+**Returns**
+
+- `readonly [number, number, number, number, number, number]`
+
+**Example**
+
+```ts
+// +10 x at depth 50 with a camera at distance 100 projects to x = 20:
+const [a, b, c, d, e, f] = projectToCanvas2D(m, { perspective: 100 });
+ctx.setTransform(a, b, c, d, e, f); // e ≈ 20
+```
+
+---
+
+# Quaternion
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/quaternion/
+
+<SourceLink href="/keyframe-flow/docs/source/transform/quaternion-ts/#L37" label="quaternion.ts:37" />
+
+An immutable unit-friendly quaternion used as the library's internal rotation representation (§4.3). Components follow the Hamilton convention `(x, y, z, w)` with `w` as the scalar part.
+
+Multiplication follows matrix conventions for column vectors: `a.multiply(b)` produces the rotation that applies `b` first and then `a`, mirroring `A × B` in §4.4.
+
+**Example**
+
+```ts
+const turn = Quaternion.fromEuler(0, Math.PI / 2, 0); // yaw 90°, radians only
+turn.rotateVector([1, 0, 0]); // Vector3 ≈ (0, 0, −1) — right-handed
+```
+
+---
+
+## Constructors
+
+<MemberHeading
+  id="constructor"
+  depth="3"
+  name="constructor"
+  sig="new Quaternion(
+	x: number,
+	y: number,
+	z: number,
+	w: number,
+): Quaternion"
+/>
+
+**Parameters**
+
+- `x` (number, default: `0`)
+- `y` (number, default: `0`)
+- `z` (number, default: `0`)
+- `w` (number, default: `1`)
+
+**Returns**
+
+`Quaternion`
+
+---
+
+## Properties
+
+<MemberHeading id="w" depth="3" name="w" sig="w: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L45" sourceLabel="quaternion.ts:45" />
+
+Scalar part.
+
+<MemberHeading id="x" depth="3" name="x" sig="x: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L39" sourceLabel="quaternion.ts:39" />
+
+Vector part X.
+
+<MemberHeading id="y" depth="3" name="y" sig="y: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L41" sourceLabel="quaternion.ts:41" />
+
+Vector part Y.
+
+<MemberHeading id="z" depth="3" name="z" sig="z: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L43" sourceLabel="quaternion.ts:43" />
+
+Vector part Z.
+
+## Methods
+
+<MemberHeading id="multiplyraw" depth="3" name="_multiplyRaw" sig="_multiplyRaw(q: Quaternion): Quaternion" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L100" sourceLabel="quaternion.ts:100" />
+
+Internal non-coercing product; never exposed so inputs stay immutable.
+
+**Parameters**
+
+- `q` ([Quaternion](/keyframe-flow/docs/quaternion))
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="conjugate" depth="3" name="conjugate" sig="conjugate(): Quaternion" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L124" sourceLabel="quaternion.ts:124" />
+
+The conjugate; for unit quaternions this is also the inverse.
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="dot" depth="3" name="dot" sig="dot(other: QuaternionObject): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L129" sourceLabel="quaternion.ts:129" />
+
+Dot product of the four components (cosine between unit orientations).
+
+**Parameters**
+
+- `other` ([QuaternionObject](/keyframe-flow/docs/quaternionobject))
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="equals" depth="3" name="equals" sig="equals(other: QuaternionObject, epsilon: number): boolean" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L203" sourceLabel="quaternion.ts:203" />
+
+Component-wise comparison within `epsilon` (inclusive). Note `q` and `-q` describe the same orientation but do not compare equal here — use `Quaternion#dot` (`|dot| ≈ 1`) for orientation equality.
+
+**Parameters**
+
+- `other` ([QuaternionObject](/keyframe-flow/docs/quaternionobject))
+- `epsilon` (number, default: `0`)
+
+**Returns**
+
+- `boolean`
+
+<MemberHeading id="length" depth="3" name="length" sig="length(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L110" sourceLabel="quaternion.ts:110" />
+
+Euclidean norm of the four components.
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="multiply" depth="3" name="multiply" sig="multiply(other: QuaternionObject): Quaternion" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L94" sourceLabel="quaternion.ts:94" />
+
+Hamilton product `this ⊗ other` — the rotation that applies `other` first, then `this`. Returns a new quaternion.
+
+**Parameters**
+
+- `other` ([QuaternionObject](/keyframe-flow/docs/quaternionobject))
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="normalize" depth="3" name="normalize" sig="normalize(): Quaternion" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L115" sourceLabel="quaternion.ts:115" />
+
+Returns a unit-length copy. Throws on zero-length quaternions.
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="rotatevector" depth="3" name="rotateVector" sig="rotateVector(v: Vector3Like): Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L184" sourceLabel="quaternion.ts:184" />
+
+Rotates a vector by this quaternion: `v' = q · v · q*`.
+
+**Parameters**
+
+- `v` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="slerp" depth="3" name="slerp" sig="slerp(other: QuaternionObject, t: number): Quaternion" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L140" sourceLabel="quaternion.ts:140" />
+
+Spherical linear interpolation toward `other` at parameter `t ∈ [0, 1]`.
+
+Inputs are normalized before use and the shortest path on the 4D sphere is taken by default (§9.1). Endpoints reproduce the inputs exactly.
+
+**Parameters**
+
+- `other` ([QuaternionObject](/keyframe-flow/docs/quaternionobject))
+- `t` (number)
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="toarray" depth="3" name="toArray" sig="toArray(): [number, number, number, number]" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L251" sourceLabel="quaternion.ts:251" />
+
+The `[x, y, z, w]` tuple form (Hamilton order).
+
+**Returns**
+
+- `[number, number, number, number]`
+
+<MemberHeading id="toeuler" depth="3" name="toEuler" sig="toEuler(): readonly [number, number, number]" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L226" sourceLabel="quaternion.ts:226" />
+
+Decomposes this rotation into Euler angles in radians, in the inverse of `Quaternion.fromEuler`'s intrinsic X → Y → Z convention (the angles whose `Rx · Ry · Rz` matrix reproduces this orientation). Angles are chosen by principal-value `asin`/`atan2`, so results need not match any particular authored triple numerically — only the resulting orientation. At the gimbal-lock poses (Y at ±90°) the X and Z angles are ambiguous; this decomposition resolves them by convention with Z set to zero. Used by angular rotation tracks (§9.1) when authored angles are not available.
+
+**Returns**
+
+- `readonly [number, number, number]`
+
+## Static Methods
+
+<MemberHeading id="from" depth="3" name="from" sig="from(value: QuaternionObject): Quaternion" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L85" sourceLabel="quaternion.ts:85" />
+
+Coerces a `{x, y, z, w}` object into a `Quaternion`.
+
+**Parameters**
+
+- `value` ([QuaternionObject](/keyframe-flow/docs/quaternionobject))
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="fromaxisangle" depth="3" name="fromAxisAngle" sig="fromAxisAngle(axis: Vector3Like, angle: number): Quaternion" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L77" sourceLabel="quaternion.ts:77" />
+
+Creates a quaternion for a rotation of `angle` radians about `axis` using the right-hand rule (§4.4). The axis is normalized first.
+
+**Parameters**
+
+- `axis` ([Vector3Like](/keyframe-flow/docs/vector3like))
+- `angle` (number)
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="fromeuler" depth="3" name="fromEuler" sig="fromEuler(x: number, y: number, z: number): Quaternion" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L66" sourceLabel="quaternion.ts:66" />
+
+Creates a quaternion from Euler angles in radians (§4.3).
+
+Angles are applied as intrinsic rotations in X → Y → Z order (each about the frame produced by the previous rotation), which is equivalent to the matrix product `Rx · Ry · Rz` acting on column vectors.
+
+**Parameters**
+
+- `x` (number)
+- `y` (number)
+- `z` (number)
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+<MemberHeading id="identity" depth="3" name="identity" sig="identity(): Quaternion" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L55" sourceLabel="quaternion.ts:55" />
+
+The identity rotation `(0, 0, 0, 1)` — no rotation at all.
+
+**Returns**
+
+- [`Quaternion`](/keyframe-flow/docs/quaternion)
+
+---
+
+# QuaternionLike
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/quaternionlike/
+
+<Signature code="QuaternionLike = QuaternionObject" />
+
+<SourceLink href="/keyframe-flow/docs/source/transform/quaternion-ts/#L20" label="quaternion.ts:20" />
+
+Any value that can be read as a quaternion `{x, y, z, w}` (§4.3).
+
+---
+
+# QuaternionObject
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/quaternionobject/
+
+<Signature
+  code="interface QuaternionObject {
+	w: number;
+	x: number;
+	y: number;
+	z: number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/transform/quaternion-ts/#L6" label="quaternion.ts:6" />
+
+Any value that can be read as a quaternion `{x, y, z, w}` (§4.3).
+
+---
+
+## Properties
+
+<MemberHeading id="w" depth="3" name="w" sig="w: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L14" sourceLabel="quaternion.ts:14" />
+
+Scalar part.
+
+<MemberHeading id="x" depth="3" name="x" sig="x: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L8" sourceLabel="quaternion.ts:8" />
+
+Vector part X.
+
+<MemberHeading id="y" depth="3" name="y" sig="y: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L10" sourceLabel="quaternion.ts:10" />
+
+Vector part Y.
+
+<MemberHeading id="z" depth="3" name="z" sig="z: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/quaternion-ts/#L12" sourceLabel="quaternion.ts:12" />
+
+Vector part Z.
+
+---
+
+# RenderTarget
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/rendertarget/
+
+<Signature
+  code="interface RenderTarget {
+	dispose?(): void;
+	setTransform(matrix: Matrix4): void;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/types-ts/#L27" label="types.ts:27" />
+
+The structural render target interface (§17.1). Any object with a `setTransform` method is a valid target — custom rendering systems do not need to inherit from a library class or import anything from it.
+
+The engine owns playback state; the target owns rendering-specific state only (§17.2). Adapters translate evaluated transforms into rendering-system-specific operations and never own animation time or playback lifecycle (§3.6). Disposing a playback must not destroy the underlying DOM element, canvas context, or graphics resource — targets are not owned resources (Appendix B.8) — so `dispose` is optional and reserved for adapter-owned bookkeeping only.
+
+**Example**
+
+```ts
+const recorder: RenderTarget = {
+  matrices: [] as Matrix4[],
+  setTransform(matrix: Matrix4) {
+    this.matrices.push(matrix);
+  },
+};
+animation.attach(recorder).play();
+```
+
+#### Implemented By
+
+- [`WebGLRenderTarget`](/keyframe-flow/docs/webglrendertarget)
+- [`WebGPURenderTarget`](/keyframe-flow/docs/webgpurendertarget)
+
+---
+
+## Methods
+
+<MemberHeading id="dispose" depth="3" name="dispose" sig="dispose(): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/types-ts/#L31" sourceLabel="types.ts:31" />
+
+Optional cleanup of adapter-owned state; never destroys host resources.
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="settransform" depth="3" name="setTransform" sig="setTransform(matrix: Matrix4): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/types-ts/#L29" sourceLabel="types.ts:29" />
+
+Receives the evaluated transform as a canonical `Matrix4` (§17.1).
+
+**Parameters**
+
+- `matrix` ([Matrix4](/keyframe-flow/docs/matrix4))
+
+**Returns**
+
+- `void`
+
+---
+
+# RotationMode
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/rotationmode/
+
+<Signature code="RotationMode = 'quaternion' | 'angular'" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/animation-ts/#L26" label="animation.ts:26" />
+
+How rotation interpolates between keyframes (§9.1).
+
+- `"quaternion"` (default): SLERP with shortest-path — the correct choice for orientations, but equivalent orientations never describe a revolution.
+- `"angular"`: component-wise interpolation of authored Euler angles in radians, enabling full revolutions without intermediate keyframes (§9.1).
+
+---
+
+# Scheduler
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/scheduler/
+
+<Signature
+  code="interface Scheduler {
+	cancel(handle: unknown): void;
+	request(callback: (time: number) => void): unknown;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/timing/scheduler-ts/#L11" label="scheduler.ts:11" />
+
+A frame callback source (§16). One `request` schedules exactly one callback invocation — the same contract as `requestAnimationFrame` — and `cancel` aborts a request that has not fired yet. The clock and scheduler are kept separate on purpose: scheduling is not timekeeping (Appendix B.7), so the engine reads timestamps from a `Clock` rather than trusting callback arguments.
+
+#### Implemented By
+
+- [`ManualScheduler`](/keyframe-flow/docs/manualscheduler)
+
+---
+
+## Methods
+
+<MemberHeading id="cancel" depth="3" name="cancel" sig="cancel(handle: unknown): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/scheduler-ts/#L15" sourceLabel="scheduler.ts:15" />
+
+Cancels a previously requested callback that has not fired yet.
+
+**Parameters**
+
+- `handle` (unknown)
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="request" depth="3" name="request" sig="request(callback: (time: number) => void): unknown" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/timing/scheduler-ts/#L13" sourceLabel="scheduler.ts:13" />
+
+Schedules `callback` for the next frame; returns a cancelable handle.
+
+**Parameters**
+
+- `callback` ((time: number) => void)
+
+**Returns**
+
+- `unknown`
+
+---
+
+# SvgTransformElementLike
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/svgtransformelementlike/
+
+<Signature
+  code="interface SvgTransformElementLike {
+	setAttribute(name: string, value: string): void;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/svg-ts/#L8" label="svg.ts:8" />
+
+The structural subset of an SVG element the adapter needs — anything with `setAttribute` works (SVG 1.1 transform attributes), no DOM lib types.
+
+---
+
+## Methods
+
+<MemberHeading id="setattribute" depth="3" name="setAttribute" sig="setAttribute(name: string, value: string): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/svg-ts/#L10" sourceLabel="svg.ts:10" />
+
+Sets an attribute — used for the SVG 1.1 `transform` attribute (§17).
+
+**Parameters**
+
+- `name` (string)
+- `value` (string)
+
+**Returns**
+
+- `void`
+
+---
+
+# systemClock
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/systemclock/
+
+<Signature code="systemClock: Clock" />
+
+<SourceLink href="/keyframe-flow/docs/source/timing/clock-ts/#L17" label="clock.ts:17" />
+
+The default clock: `performance.now()` when available, otherwise `Date.now()`. Works unchanged in browsers and Node.js with no browser-API dependency at import time (§2 principle 1).
+
+**Type**
+
+[`Clock`](/keyframe-flow/docs/clock)
+
+---
+
+# target
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/target/
+
+<Signature
+  code="target: {
+	canvas: (context: CanvasRenderingContext2DLike, options?: Canvas2DTargetOptions) => RenderTarget;
+	html: (element: CssTransformElementLike, options?: HtmlTargetOptions) => RenderTarget;
+	svg: (element: SvgTransformElementLike) => RenderTarget;
+	webgl: (options?: WebGLRenderTargetOptions) => WebGLRenderTarget;
+	webgpu: (options?: WebGPURenderTargetOptions) => WebGPURenderTarget;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/index-ts/#L25" label="index.ts:25" />
+
+Built-in render target factories (§17).
+
+```ts
+spin.attach(target.html(element)).play();
+spin.attach(target.svg(gElement)).play();
+spin.attach(target.canvas(ctx2d)).play();
+spin.attach(target.webgl({ onTransform: uploadAndDraw })).play();
+```
+
+Custom rendering systems skip this namespace entirely: any object with a `setTransform(matrix)` method is a valid target (§17.1).
+
+**Properties**
+
+- `canvas` ((context: [CanvasRenderingContext2DLike](/keyframe-flow/docs/canvasrenderingcontext2dlike), options?: [Canvas2DTargetOptions](/keyframe-flow/docs/canvas2dtargetoptions)) => [RenderTarget](/keyframe-flow/docs/rendertarget)) — `canvas` — Canvas 2D CTM adapter with explicit projection (§17.3).
+- `html` ((element: [CssTransformElementLike](/keyframe-flow/docs/csstransformelementlike), options?: [HtmlTargetOptions](/keyframe-flow/docs/htmltargetoptions)) => [RenderTarget](/keyframe-flow/docs/rendertarget)) — `html` — CSS `matrix3d()` transform adapter for HTML elements (§17).
+- `svg` ((element: [SvgTransformElementLike](/keyframe-flow/docs/svgtransformelementlike)) => [RenderTarget](/keyframe-flow/docs/rendertarget)) — `svg` — SVG 1.1 `matrix()` transform attribute adapter (§17).
+- `webgl` ((options?: [WebGLRenderTargetOptions](/keyframe-flow/docs/webglrendertargetoptions)) => [WebGLRenderTarget](/keyframe-flow/docs/webglrendertarget)) — `webgl` — column-major matrix upload adapter for WebGL hosts (§3.6).
+- `webgpu` ((options?: [WebGPURenderTargetOptions](/keyframe-flow/docs/webgpurendertargetoptions)) => [WebGPURenderTarget](/keyframe-flow/docs/webgpurendertarget)) — `webgpu` — column-major matrix upload adapter for WebGPU hosts (§3.6).
+
+---
+
+# Transform
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/transform/
+
+<SourceLink href="/keyframe-flow/docs/source/transform/transform-ts/#L53" label="transform.ts:53" />
+
+An immutable transform with the canonical component representation `{ position, rotation: Quaternion, scale }` (§4.3), available as the frozen `components` property.
+
+Euler angles are accepted only as a construction interface in radians; rotations are stored internally as quaternions (§4.3). Every operation returns a new transform without modifying its source (§4.2).
+
+Composition follows §4.4 exactly: fluent operations are applied in call order as local-space operations (right-multiplication, `M ← M × Op`), and parent-to-child composition uses `Parent × Local`. When a composed result cannot be represented as ordinary TRS components — for example rotation appended after non-uniform scale, which introduces shear — the operation throws explicitly rather than silently approximating (§4.3, §9.2). Use `Matrix4` directly for such matrices.
+
+---
+
+## Constructors
+
+<MemberHeading id="constructor" depth="3" name="constructor" sig="new Transform(components: TransformComponentsInit): Transform" />
+
+**Parameters**
+
+- `components` ([TransformComponentsInit](/keyframe-flow/docs/transformcomponentsinit), default: `{}`)
+
+**Returns**
+
+`Transform`
+
+---
+
+## Properties
+
+<MemberHeading id="components" depth="3" name="components" sig="components: Readonly<TransformComponents>" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L55" sourceLabel="transform.ts:55" />
+
+Canonical position/rotation/scale components; frozen and never mutated.
+
+## Methods
+
+<MemberHeading id="compose" depth="3" name="compose" sig="compose(local: Transform): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L118" sourceLabel="transform.ts:118" />
+
+Composes `parent × local` into a new transform (§4.4). The local transform is interpreted in the parent's coordinate system. Throws when the composed matrix is not representable as TRS components.
+
+**Parameters**
+
+- `local` ([Transform](/keyframe-flow/docs/transform))
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+**Example**
+
+```ts
+const arm = transform().translate(100, 0); // parent
+const item = transform().rotateZ(Math.PI / 2); // child in parent frame
+const world = arm.compose(item); // Parent × Local (§4.4)
+```
+
+<MemberHeading id="equals" depth="3" name="equals" sig="equals(other: Transform, epsilon: number): boolean" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L240" sourceLabel="transform.ts:240" />
+
+Structural equality; rotations compare without quaternion sign ambiguity.
+
+**Parameters**
+
+- `other` ([Transform](/keyframe-flow/docs/transform))
+- `epsilon` (number, default: `EQUALS_EPSILON`)
+
+**Returns**
+
+- `boolean`
+
+<MemberHeading id="rotate" depth="3" name="rotate" sig="rotate(rotation: QuaternionObject): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L178" sourceLabel="transform.ts:178" />
+
+Appends a rotation in the object's local frame: `M ← M × R(q)`. Throws when the result is not representable as TRS (non-uniform scale followed by rotation produces shear, §9.2).
+
+**Parameters**
+
+- `rotation` ([QuaternionObject](/keyframe-flow/docs/quaternionobject))
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="rotatex" depth="3" name="rotateX" sig="rotateX(angle: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L159" sourceLabel="transform.ts:159" />
+
+Rotates by `angle` radians about the local X axis (right-hand rule).
+
+**Parameters**
+
+- `angle` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="rotatey" depth="3" name="rotateY" sig="rotateY(angle: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L164" sourceLabel="transform.ts:164" />
+
+Rotates by `angle` radians about the local Y axis (right-hand rule).
+
+**Parameters**
+
+- `angle` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="rotatez" depth="3" name="rotateZ" sig="rotateZ(angle: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L169" sourceLabel="transform.ts:169" />
+
+Rotates by `angle` radians about the local Z axis (right-hand rule).
+
+**Parameters**
+
+- `angle` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="scale" depth="3" name="scale" sig="scale(x: number, y: number, z: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L188" sourceLabel="transform.ts:188" />
+
+Scales by `(x, y, z)` along the object's local axes; a single argument scales uniformly. Equivalent to `M ← M × S` (exact: diagonal scales compose component-wise).
+
+**Parameters**
+
+- `x` (number)
+- `y` (number, default: `x`)
+- `z` (number, default: `x`)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="tomatrix" depth="3" name="toMatrix" sig="toMatrix(): Matrix4" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L92" sourceLabel="transform.ts:92" />
+
+The matrix `T × R × S` for these components.
+
+**Returns**
+
+- [`Matrix4`](/keyframe-flow/docs/matrix4)
+
+<MemberHeading id="translate" depth="3" name="translate" sig="translate(x: number, y: number, z: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L148" sourceLabel="transform.ts:148" />
+
+Translates by `(x, y, z)` along the object's local axes. Omitted components default to zero. Equivalent to `M ← M × T`.
+
+**Parameters**
+
+- `x` (number)
+- `y` (number, default: `0`)
+- `z` (number, default: `0`)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+**Example**
+
+```ts
+const t = transform().translate(10, 20); // position (10, 20, 0)
+t.components.position.y; // 20 — the source is never mutated (§4.2)
+```
+
+<MemberHeading id="worldrotate" depth="3" name="worldRotate" sig="worldRotate(rotation: QuaternionObject): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L229" sourceLabel="transform.ts:229" />
+
+Rotates in the parent coordinate system: `M ← R(q) × M` (exact).
+
+**Parameters**
+
+- `rotation` ([QuaternionObject](/keyframe-flow/docs/quaternionobject))
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="worldrotatex" depth="3" name="worldRotateX" sig="worldRotateX(angle: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L214" sourceLabel="transform.ts:214" />
+
+Rotates by `angle` radians about the parent's X axis.
+
+**Parameters**
+
+- `angle` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="worldrotatey" depth="3" name="worldRotateY" sig="worldRotateY(angle: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L219" sourceLabel="transform.ts:219" />
+
+Rotates by `angle` radians about the parent's Y axis.
+
+**Parameters**
+
+- `angle` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="worldrotatez" depth="3" name="worldRotateZ" sig="worldRotateZ(angle: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L224" sourceLabel="transform.ts:224" />
+
+Rotates by `angle` radians about the parent's Z axis.
+
+**Parameters**
+
+- `angle` (number)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="worldtranslate" depth="3" name="worldTranslate" sig="worldTranslate(x: number, y: number, z: number): Transform" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L204" sourceLabel="transform.ts:204" />
+
+Translates by `(x, y, z)` along the parent's axes.
+
+**Parameters**
+
+- `x` (number)
+- `y` (number, default: `0`)
+- `z` (number, default: `0`)
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+## Static Methods
+
+<MemberHeading id="compose" depth="3" name="compose" sig="compose(parent: Transform, local: Transform): Transform" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L126" sourceLabel="transform.ts:126" />
+
+Static form of `Transform#compose`: composes `parent × local` into a new transform (§4.4).
+
+**Parameters**
+
+- `parent` ([Transform](/keyframe-flow/docs/transform))
+- `local` ([Transform](/keyframe-flow/docs/transform))
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="frominit" depth="3" name="fromInit" sig="fromInit(init: TransformInit): Transform" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L73" sourceLabel="transform.ts:73" />
+
+Coerces developer-facing input (§4.1) into canonical components.
+
+**Parameters**
+
+- `init` ([TransformInit](/keyframe-flow/docs/transforminit))
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+<MemberHeading id="frommatrix" depth="3" name="fromMatrix" sig="fromMatrix(matrix: Matrix4): Transform" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L102" sourceLabel="transform.ts:102" />
+
+Creates a transform by decomposing a matrix into TRS components. Throws explicitly for shear, reflection, perspective, or singular matrices (§15.1).
+
+**Parameters**
+
+- `matrix` ([Matrix4](/keyframe-flow/docs/matrix4))
+
+**Returns**
+
+- [`Transform`](/keyframe-flow/docs/transform)
+
+---
+
+# TransformComponents
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/transformcomponents/
+
+<Signature
+  code="interface TransformComponents {
+	position: Vector3;
+	rotation: Quaternion;
+	scale: Vector3;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/transform/components-ts/#L10" label="components.ts:10" />
+
+The canonical component representation of a transform (§4.3): position, quaternion rotation, and scale. Shared by the transform and matrix subsystems; declared as a pure type so neither module depends on the other at runtime.
+
+---
+
+## Properties
+
+<MemberHeading id="position" depth="3" name="position" sig="position: Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/components-ts/#L12" sourceLabel="components.ts:12" />
+
+Translation component.
+
+<MemberHeading id="rotation" depth="3" name="rotation" sig="rotation: Quaternion" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/components-ts/#L14" sourceLabel="components.ts:14" />
+
+Rotation component (unit quaternion).
+
+<MemberHeading id="scale" depth="3" name="scale" sig="scale: Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/components-ts/#L16" sourceLabel="components.ts:16" />
+
+Per-axis scale component; non-negative by construction (§4.3).
+
+---
+
+# TransformComponentsInit
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/transformcomponentsinit/
+
+<Signature
+  code="interface TransformComponentsInit {
+	position?: Vector3Like;
+	rotation?: QuaternionObject;
+	scale?: Vector3Like;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/transform/transform-ts/#L10" label="transform.ts:10" />
+
+Canonical construction input; omitted (or undefined) parts default to identity.
+
+---
+
+## Properties
+
+<MemberHeading id="position" depth="3" name="position" sig="position: Vector3Like" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L12" sourceLabel="transform.ts:12" />
+
+Position component input (§4.3). Defaults to `(0, 0, 0)`.
+
+<MemberHeading id="rotation" depth="3" name="rotation" sig="rotation: QuaternionObject" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L14" sourceLabel="transform.ts:14" />
+
+Rotation component input — quaternion or structural `{x, y, z, w}`. Defaults to identity.
+
+<MemberHeading id="scale" depth="3" name="scale" sig="scale: Vector3Like" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L16" sourceLabel="transform.ts:16" />
+
+Scale component input (§4.3). Defaults to `(1, 1, 1)`.
+
+---
+
+# TransformInit
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/transforminit/
+
+<Signature
+  code="interface TransformInit {
+	position?: Vector3Like;
+	rotation?: readonly [number, number, number] | QuaternionObject;
+	scale?: number | Vector3Like;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/transform/transform-ts/#L24" label="transform.ts:24" />
+
+Developer-facing construction input (§4.1). Rotation may be given as a quaternion or as Euler angles in radians `[x, y, z]` — the convenience construction interface from §4.3. Scale accepts a uniform number.
+
+---
+
+## Properties
+
+<MemberHeading id="position" depth="3" name="position" sig="position: Vector3Like" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L26" sourceLabel="transform.ts:26" />
+
+Position; omitted means identity.
+
+<MemberHeading id="rotation" depth="3" name="rotation" sig="rotation: readonly [number, number, number] | QuaternionObject" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L28" sourceLabel="transform.ts:28" />
+
+Quaternion (or `{x, y, z, w}`), or Euler radians `[x, y, z]` applied X → Y → Z (§4.3).
+
+<MemberHeading id="scale" depth="3" name="scale" sig="scale: number | Vector3Like" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/transform-ts/#L30" sourceLabel="transform.ts:30" />
+
+Per-axis vector, or a uniform scalar; omitted means `(1, 1, 1)`.
+
+---
+
+# TransformKeyframe
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/transformkeyframe/
+
+<Signature
+  code="interface TransformKeyframe {
+	at: number;
+	easing?: Easing;
+	transform: TransformInit | Transform;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/animation/keyframes-ts/#L22" label="keyframes.ts:22" />
+
+A transform keyframe as authored (§6.1). `easing` controls the interpolation from this keyframe to the next one (§8); it is omitted on the final keyframe because there is no following segment.
+
+---
+
+## Properties
+
+<MemberHeading id="at" depth="3" name="at" sig="at: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L24" sourceLabel="keyframes.ts:24" />
+
+Normalized timeline position in `[0, 1]`, strictly increasing (§6.3).
+
+<MemberHeading id="easing" depth="3" name="easing" sig="easing: Easing" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L28" sourceLabel="keyframes.ts:28" />
+
+Segment easing controlling interpolation to the next keyframe (§8).
+
+<MemberHeading id="transform" depth="3" name="transform" sig="transform: TransformInit | Transform" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/animation/keyframes-ts/#L26" sourceLabel="keyframes.ts:26" />
+
+Complete transform or property-level partial value reached here (§7).
+
+---
+
+# TransformKeyframeSource
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/transformkeyframesource/
+
+<Signature code="TransformKeyframeSource = readonly TransformKeyframe[] | Iterable<TransformKeyframe> | (() => Iterable<TransformKeyframe>)" />
+
+<SourceLink href="/keyframe-flow/docs/source/animation/keyframes-ts/#L58" label="keyframes.ts:58" />
+
+Sources accepted for `keyframes` definitions (§5.4): arrays, synchronous iterables, generator instances, and functions returning synchronous iterables. All are consumed eagerly and exactly once when the animation definition is created (§5.5).
+
+---
+
+# Vector3
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/vector3/
+
+<SourceLink href="/keyframe-flow/docs/source/transform/vector3-ts/#L31" label="vector3.ts:31" />
+
+An immutable 3D vector in the library's right-handed coordinate system (§4.4).
+
+All operations return new vectors; instances are never mutated (§4.2).
+
+**Example**
+
+```ts
+const v = new Vector3(1, 2, 3);
+const unit = v.normalize(); // (0.267, 0.535, 0.802) — new vector, `v` intact
+```
+
+---
+
+## Constructors
+
+<MemberHeading id="constructor" depth="3" name="constructor" sig="new Vector3(x: number, y: number, z: number): Vector3" />
+
+**Parameters**
+
+- `x` (number, default: `0`)
+- `y` (number, default: `0`)
+- `z` (number, default: `0`)
+
+**Returns**
+
+`Vector3`
+
+---
+
+## Properties
+
+<MemberHeading id="x" depth="3" name="x" sig="x: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L33" sourceLabel="vector3.ts:33" />
+
+X coordinate.
+
+<MemberHeading id="y" depth="3" name="y" sig="y: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L35" sourceLabel="vector3.ts:35" />
+
+Y coordinate.
+
+<MemberHeading id="z" depth="3" name="z" sig="z: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L37" sourceLabel="vector3.ts:37" />
+
+Z coordinate.
+
+## Methods
+
+<MemberHeading id="add" depth="3" name="add" sig="add(other: Vector3Like): Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L60" sourceLabel="vector3.ts:60" />
+
+Component-wise addition. Returns a new vector.
+
+**Parameters**
+
+- `other` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="cross" depth="3" name="cross" sig="cross(other: Vector3Like): Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L81" sourceLabel="vector3.ts:81" />
+
+Right-handed cross product `this × other`.
+
+**Parameters**
+
+- `other` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="dot" depth="3" name="dot" sig="dot(other: Vector3Like): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L75" sourceLabel="vector3.ts:75" />
+
+Dot product.
+
+**Parameters**
+
+- `other` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="equals" depth="3" name="equals" sig="equals(other: Vector3Like, epsilon: number): boolean" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L120" sourceLabel="vector3.ts:120" />
+
+Element-wise comparison within `epsilon` (inclusive). Accepts any `Vector3Like`.
+
+```ts
+new Vector3(1, 2, 3).equals([1, 2, 3]); // true
+```
+
+**Parameters**
+
+- `other` ([Vector3Like](/keyframe-flow/docs/vector3like))
+- `epsilon` (number, default: `0`)
+
+**Returns**
+
+- `boolean`
+
+<MemberHeading id="length" depth="3" name="length" sig="length(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L91" sourceLabel="vector3.ts:91" />
+
+Euclidean length.
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="lengthsquared" depth="3" name="lengthSquared" sig="lengthSquared(): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L96" sourceLabel="vector3.ts:96" />
+
+Squared length (avoids a square root for comparisons).
+
+**Returns**
+
+- `number`
+
+<MemberHeading id="normalize" depth="3" name="normalize" sig="normalize(): Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L105" sourceLabel="vector3.ts:105" />
+
+Returns a unit-length copy pointing in the same direction. Throws on zero-length vectors rather than producing NaN (§9.2 spirit: never silently approximate).
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="scale" depth="3" name="scale" sig="scale(factor: number | Vector3Like): Vector3" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L66" sourceLabel="vector3.ts:66" />
+
+Uniform scaling by a scalar, or per-axis scaling by a vector.
+
+**Parameters**
+
+- `factor` (number | [Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="toarray" depth="3" name="toArray" sig="toArray(): [number, number, number]" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L130" sourceLabel="vector3.ts:130" />
+
+The `[x, y, z]` tuple form, for upload paths and destructuring.
+
+**Returns**
+
+- `[number, number, number]`
+
+## Static Methods
+
+<MemberHeading id="from" depth="3" name="from" sig="from(value: Vector3Like): Vector3" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L51" sourceLabel="vector3.ts:51" />
+
+Coerces a tuple or `{x, y, z}` object into a `Vector3`.
+
+**Parameters**
+
+- `value` ([Vector3Like](/keyframe-flow/docs/vector3like))
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+<MemberHeading id="zero" depth="3" name="zero" sig="zero(): Vector3" />
+
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L46" sourceLabel="vector3.ts:46" />
+
+The zero vector `(0, 0, 0)`.
+
+**Returns**
+
+- [`Vector3`](/keyframe-flow/docs/vector3)
+
+---
+
+# Vector3Like
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/vector3like/
+
+<Signature code="Vector3Like = Vector3Object | readonly [number, number, number]" />
+
+<SourceLink href="/keyframe-flow/docs/source/transform/vector3-ts/#L18" label="vector3.ts:18" />
+
+Any value that can be read as a 3D vector: an `Vector3Object`, or a `[x, y, z]` tuple (§4).
+
+---
+
+# Vector3Object
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/vector3object/
+
+<Signature
+  code="interface Vector3Object {
+	x: number;
+	y: number;
+	z: number;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/transform/vector3-ts/#L5" label="vector3.ts:5" />
+
+Any `{x, y, z}` object readable as a 3D vector — the structural form of `Vector3Like`.
+
+---
+
+## Properties
+
+<MemberHeading id="x" depth="3" name="x" sig="x: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L7" sourceLabel="vector3.ts:7" />
+
+X coordinate.
+
+<MemberHeading id="y" depth="3" name="y" sig="y: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L9" sourceLabel="vector3.ts:9" />
+
+Y coordinate.
+
+<MemberHeading id="z" depth="3" name="z" sig="z: number" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/transform/vector3-ts/#L11" sourceLabel="vector3.ts:11" />
+
+Z coordinate.
+
+---
+
+# WebGLRenderTarget
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/webglrendertarget/
+
+<SourceLink href="/keyframe-flow/docs/source/targets/webgl-ts/#L27" label="webgl.ts:27" />
+
+WebGL render target adapter (§3.6, §20 M5).
+
+**Remarks**
+
+The adapter owns only rendering state: the latest evaluated transform as a column-major `Float32Array` — the exact layout `gl.uniformMatrix4fv` and GLSL `mat4` consume (§15) — plus an optional upload callback. It creates no GL resources, never touches playback time or lifecycle (§3.6), and disposal cannot destroy contexts, buffers, or programs (Appendix B.8). Hosts draw in the `onTransform` hook or poll [WebGLRenderTarget.matrixValues](/keyframe-flow/docs/webglrendertarget#matrixvalues) from their own render loop.
+
+---
+
+## Constructors
+
+<MemberHeading
+  id="constructor"
+  depth="3"
+  name="constructor"
+  sig="new WebGLRenderTarget(
+	options: WebGLRenderTargetOptions,
+): WebGLRenderTarget"
+/>
+
+**Parameters**
+
+- `options` ([WebGLRenderTargetOptions](/keyframe-flow/docs/webglrendertargetoptions), default: `{}`)
+
+**Returns**
+
+`WebGLRenderTarget`
+
+#### Implements
+
+- [`RenderTarget`](/keyframe-flow/docs/rendertarget)
+
+---
+
+## Accessors
+
+<MemberHeading id="matrixvalues" depth="3" name="matrixValues" sig="get matrixValues(): Float32Array" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/webgl-ts/#L38" sourceLabel="webgl.ts:38" />
+
+A copy of the latest transform in column-major GL upload order (§15).
+
+## Methods
+
+<MemberHeading id="copymatrixvaluesto" depth="3" name="copyMatrixValuesTo" sig="copyMatrixValuesTo(out: Float32Array): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/webgl-ts/#L43" sourceLabel="webgl.ts:43" />
+
+Copies the latest values into `out` without allocating (performance, §2.9).
+
+**Parameters**
+
+- `out` (Float32Array)
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="settransform" depth="3" name="setTransform" sig="setTransform(matrix: Matrix4): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/webgl-ts/#L50" sourceLabel="webgl.ts:50" />
+
+_Implementation of&#x20;_[`setTransform`](/keyframe-flow/docs/rendertarget#settransform)
+
+Receives the evaluated transform as a canonical `Matrix4` (§17.1).
+
+**Parameters**
+
+- `matrix` ([Matrix4](/keyframe-flow/docs/matrix4))
+
+**Returns**
+
+- `void`
+
+---
+
+# WebGLRenderTargetOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/webglrendertargetoptions/
+
+<Signature
+  code="interface WebGLRenderTargetOptions {
+	onTransform?: (matrix: Float32Array) => void;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/webgl-ts/#L5" label="webgl.ts:5" />
+
+Options for `webgl`.
+
+---
+
+## Properties
+
+<MemberHeading id="ontransform" depth="3" name="onTransform" sig="onTransform: (matrix: Float32Array) => void" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/targets/webgl-ts/#L12" sourceLabel="webgl.ts:12" />
+
+Upload hook invoked after every evaluation with the new column-major matrix values — typically `gl.uniformMatrix4fv(location, false, values)` plus a draw call. Returning here rather than owning a GL program keeps the adapter free of shader and pipeline assumptions (§17.2).
+
+---
+
+# WebGPURenderTarget
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/webgpurendertarget/
+
+<SourceLink href="/keyframe-flow/docs/source/targets/webgpu-ts/#L28" label="webgpu.ts:28" />
+
+WebGPU render target adapter (§3.6, §20 M5).
+
+**Remarks**
+
+The adapter owns only rendering state: the latest evaluated transform as a column-major `Float32Array`, matching WGSL's `mat4x4<f32>` uniform layout element-for-element (§15). It creates no GPU resources, never touches playback time or lifecycle (§3.6), and disposal cannot destroy devices, buffers, or encoders (Appendix B.8) — hosts encode work in the `onTransform` hook or read [WebGPURenderTarget.matrixValues](/keyframe-flow/docs/webgpurendertarget#matrixvalues) from their own frame loop.
+
+---
+
+## Constructors
+
+<MemberHeading
+  id="constructor"
+  depth="3"
+  name="constructor"
+  sig="new WebGPURenderTarget(
+	options: WebGPURenderTargetOptions,
+): WebGPURenderTarget"
+/>
+
+**Parameters**
+
+- `options` ([WebGPURenderTargetOptions](/keyframe-flow/docs/webgpurendertargetoptions), default: `{}`)
+
+**Returns**
+
+`WebGPURenderTarget`
+
+#### Implements
+
+- [`RenderTarget`](/keyframe-flow/docs/rendertarget)
+
+---
+
+## Accessors
+
+<MemberHeading id="matrixvalues" depth="3" name="matrixValues" sig="get matrixValues(): Float32Array" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/webgpu-ts/#L39" sourceLabel="webgpu.ts:39" />
+
+A copy of the latest transform in column-major WGSL uniform layout (§15).
+
+## Methods
+
+<MemberHeading id="copymatrixvaluesto" depth="3" name="copyMatrixValuesTo" sig="copyMatrixValuesTo(out: Float32Array): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/webgpu-ts/#L44" sourceLabel="webgpu.ts:44" />
+
+Copies the latest values into `out` without allocating (performance, §2.9).
+
+**Parameters**
+
+- `out` (Float32Array)
+
+**Returns**
+
+- `void`
+
+<MemberHeading id="settransform" depth="3" name="setTransform" sig="setTransform(matrix: Matrix4): void" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/targets/webgpu-ts/#L53" sourceLabel="webgpu.ts:53" />
+
+_Implementation of&#x20;_[`setTransform`](/keyframe-flow/docs/rendertarget#settransform)
+
+Receives the evaluated transform as a canonical `Matrix4` (§17.1).
+
+**Parameters**
+
+- `matrix` ([Matrix4](/keyframe-flow/docs/matrix4))
+
+**Returns**
+
+- `void`
+
+---
+
+# WebGPURenderTargetOptions
+Source: https://johnsonjo4531.github.io/keyframe-flow/docs/webgpurendertargetoptions/
+
+<Signature
+  code="interface WebGPURenderTargetOptions {
+	onTransform?: (matrix: Float32Array) => void;
+}"
+/>
+
+<SourceLink href="/keyframe-flow/docs/source/targets/webgpu-ts/#L5" label="webgpu.ts:5" />
+
+Options for `webgpu`.
+
+---
+
+## Properties
+
+<MemberHeading id="ontransform" depth="3" name="onTransform" sig="onTransform: (matrix: Float32Array) => void" />
+
+<MemberMeta badges="readonly" sourceHref="/keyframe-flow/docs/source/targets/webgpu-ts/#L13" sourceLabel="webgpu.ts:13" />
+
+Upload hook invoked after every evaluation with the new column-major matrix values — copy them into your uniform buffer (WGSL `mat4x4<f32>` uses the same column-major layout, §15) and encode draw calls. Keeping command encoding host-side leaves device, queue, and pipeline ownership with the host (§17.2).
