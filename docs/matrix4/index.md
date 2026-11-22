@@ -44,7 +44,7 @@ m.el(12); // 10 — translation x at column-major index 12 (§15)
 
 <MemberHeading id="applytopoint" depth="3" name="applyToPoint" sig="applyToPoint(point: Vector3Like): Vector3" />
 
-<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L414" sourceLabel="matrix4.ts:414" />
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L420" sourceLabel="matrix4.ts:420" />
 
 Applies the matrix to a point (implicit w = 1).
 
@@ -58,7 +58,7 @@ Applies the matrix to a point (implicit w = 1).
 
 <MemberHeading id="applytovector" depth="3" name="applyToVector" sig="applyToVector(vector: Vector3Like): Vector3" />
 
-<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L424" sourceLabel="matrix4.ts:424" />
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L430" sourceLabel="matrix4.ts:430" />
 
 Applies the rotation/scale part to a direction vector (implicit w = 0).
 
@@ -87,7 +87,7 @@ Reads the element at `(row, column)`.
 
 <MemberHeading id="decompose" depth="3" name="decompose" sig="decompose(): TransformComponents" />
 
-<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L336" sourceLabel="matrix4.ts:336" />
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L342" sourceLabel="matrix4.ts:342" />
 
 Extracts `{ position, rotation, scale }` from this matrix when it is mathematically decomposable into ordinary TRS components (§15.1).
 
@@ -97,9 +97,23 @@ Throws explicitly for matrices containing shear, reflection, perspective, or sin
 
 - [`TransformComponents`](/keyframe-flow/docs/transformcomponents)
 
+<MemberHeading id="el" depth="3" name="el" sig="el(index: number): number" />
+
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L189" sourceLabel="matrix4.ts:189" />
+
+Reads the raw element at a column-major storage index (§15): `el(0..3)` is the first column, and `el(12)`, `el(13)`, `el(14)` are the translation x/y/z. This is the layout CSS `matrix3d()`, `gl.uniformMatrix4fv`, and `queue.writeBuffer` uploads expect; see also [Matrix4#at](/keyframe-flow/docs/matrix4#at) for `(row, column)` access.
+
+**Parameters**
+
+- `index` (number)
+
+**Returns**
+
+- `number`
+
 <MemberHeading id="equals" depth="3" name="equals" sig="equals(other: Matrix4, epsilon: number): boolean" />
 
-<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L434" sourceLabel="matrix4.ts:434" />
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L440" sourceLabel="matrix4.ts:440" />
 
 Element-wise comparison within `epsilon`.
 
@@ -114,7 +128,7 @@ Element-wise comparison within `epsilon`.
 
 <MemberHeading id="invert" depth="3" name="invert" sig="invert(): Matrix4" />
 
-<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L213" sourceLabel="matrix4.ts:213" />
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L219" sourceLabel="matrix4.ts:219" />
 
 Returns the inverse matrix. Throws when the matrix is singular, rather than producing approximate values (§9.2).
 
@@ -124,7 +138,7 @@ Returns the inverse matrix. Throws when the matrix is singular, rather than prod
 
 <MemberHeading id="lerp" depth="3" name="lerp" sig="lerp(other: Matrix4, t: number): Matrix4" />
 
-<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L452" sourceLabel="matrix4.ts:452" />
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L458" sourceLabel="matrix4.ts:458" />
 
 Raw element-wise linear interpolation between two matrices — an explicit advanced escape hatch (§9.2), never the default transform interpolation. The result is generally not TRS-decomposable (interpolated rotations gain shear); decompose it only when the inputs justify it, and accept the explicit throw otherwise. See `Animation`'s `interpolation: "raw-matrix"` option for animation-level use.
 
@@ -139,7 +153,7 @@ Raw element-wise linear interpolation between two matrices — an explicit advan
 
 <MemberHeading id="multiply" depth="3" name="multiply" sig="multiply(other: Matrix4): Matrix4" />
 
-<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L192" sourceLabel="matrix4.ts:192" />
+<MemberMeta sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L198" sourceLabel="matrix4.ts:198" />
 
 Matrix product `this × other` in conventional mathematical notation with column vectors (§4.4): the composed transform applies `other` first, then `this`. Neither operand is modified.
 
@@ -240,7 +254,7 @@ Creates a matrix from a `Float32Array` interpreted as column-major values. Preci
 ): Matrix4"
 />
 
-<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L290" sourceLabel="matrix4.ts:290" />
+<MemberMeta badges="static" sourceHref="/keyframe-flow/docs/source/matrix/matrix4-ts/#L296" sourceLabel="matrix4.ts:296" />
 
 Composes position, rotation, and scale into the canonical matrix `T × R × S` (§3.3): a point is scaled first, then rotated, then translated.
 

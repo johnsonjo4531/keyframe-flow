@@ -44,6 +44,14 @@ Key guarantees:
 - **`finished` never rejects.** It resolves with a status object; awaiting it from `idle` waits for the first run, and every new run exposes a fresh promise. Code that awaits can therefore never hang: disposal settles any pending wait as `{ status: "cancelled" }`.
 - **Disposal is resource release, not destruction.** The animation definition, the render target, and any DOM/GPU objects survive untouched (Appendix B.8); adapter-level cleanup hooks run at most once.
 
+Drive every transition yourself — play, pause, reset, reverse, cancel — with a live readout of `state`, `currentTime`, and iteration:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-lifecycle--transport-controls" title="Live demo — playback transport and state machine" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-lifecycle--transport-controls)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-lifecycle--transport-controls) for the full example.
+
 ## Playback rate
 
 `playbackRate` is settable while running and continuous — changing it never teleports `currentTime`, it only changes how fast time advances afterwards. Negative rates play backwards; combined with `direction: "alternate"` the two compose predictably (§13).
@@ -63,9 +71,25 @@ const pendulum = slide.attach(target.html(element), {
 - `direction: "reverse"` plays each iteration backwards; `"alternate"` flips per iteration; `"alternate-reverse"` starts reversed.
 - Multiple iteration boundaries can be crossed in a single frame (long stalls, high rates) without losing sync — time is computed from timestamps, never counted per frame (§16).
 
+Three alternate iterations, forward–back–forward, with the iteration counter visible:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-repetition-direction--alternate-thrice" title="Live demo — three alternating iterations" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-repetition-direction--alternate-thrice)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-repetition-direction--alternate-thrice) for the options.
+
 ## Target ownership: replacement, not composition (§14)
 
 Starting a playback on a target **supersedes** the previous owner: the older playback is cancelled (its `finished` resolves `{ status: "cancelled" }`) and the newest one exclusively drives the target. There is no additive blending — if you want two motions to combine, compose the animations first with `Animation.combine`, then attach once.
+
+Start A, then B: A's `finished` resolves `{ status: "cancelled" }` while B takes over the shared target — no blending, both statuses shown live:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=playback-target-supersede--ownership-transfer" title="Live demo — target supersede and ownership transfer" height="460" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/playback-target-supersede--ownership-transfer)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/playback-target-supersede--ownership-transfer) for the two playbacks.
 
 ## Deterministic testing with manual timing
 

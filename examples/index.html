@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>keyframe-flow — vanilla TypeScript examples</title>
+    <script>
+      // Apply the saved (or system) theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var t = localStorage.getItem("kf-gallery-theme");
+          if (t !== "light" && t !== "dark") {
+            t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+          }
+          document.documentElement.dataset.theme = t;
+        } catch (_) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/keyframe-flow/examples/assets/index-73IomlRf.js"></script>
+    <link rel="stylesheet" crossorigin href="/keyframe-flow/examples/assets/index-BbPrdjMt.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#/">keyframe-flow <span>vanilla TS examples</span></a>
+      <nav class="site-nav">
+        <button id="theme-toggle" type="button" class="theme-toggle"></button>
+        <a href="/keyframe-flow/docs/">Docs</a>
+        <a href="/keyframe-flow/storybook/">Storybook (React)</a>
+      </nav>
+    </header>
+    <main id="app"></main>
+  </body>
+</html>

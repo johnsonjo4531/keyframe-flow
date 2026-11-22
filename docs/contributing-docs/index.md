@@ -20,6 +20,7 @@ Everything on the documentation site is generated or authored in this repository
 | `examples/.storybook/`              | Storybook config                          | —                                   |
 | `examples/stories/**/*.stories.tsx` | Live examples (authored)                  | —                                   |
 | `site/storybook/`                   | Built Storybook                           | `make build-storybook`              |
+| `docs/embed-host-rewrite.js`        | Embed-preview shim (no-op on Pages)       | copied into `site/docs/`            |
 | `docs/site-index.html`              | Combined-site landing page                | copied by deploy target             |
 | `site/`                             | Whole staging site                        | both targets                        |
 
@@ -51,7 +52,7 @@ GitHub Pages hosts this project under `/keyframe-flow/`, and every base path mus
 
 - `typedoc.json → cleanJsdocTheme.basePath`: `/keyframe-flow/docs` (the API reference lives in a sub-path of the site, not its root).
 - Storybook build: output served from `/keyframe-flow/storybook/`; builder-vite emits fully relative asset URLs, so the site is portable under any mount path (no `--base-path` flag exists in Storybook 10).
-- Guide links to other sites/pages use root-absolute paths (`/keyframe-flow/storybook/…`) so they resolve identically from any docs sub-page.
+- Guide links to other sites/pages use **relative** paths (`../../storybook/…`) so they resolve identically from any docs sub-page. (Root-absolute hrefs written in guide Markdown are rewritten by the theme relative to `basePath` — `/keyframe-flow/storybook/…` ends up as `/keyframe-flow/docs/keyframe-flow/storybook/…` — so avoid them in prose.)
 
 ## Authoring guides
 
@@ -76,6 +77,32 @@ order: 4
   ```
 
 - Keep guides user-facing; design rationale stays in [`design-docs/vision.md`](https://github.com/johnsonjo4531/keyframe-flow/blob/main/design-docs/vision.md) and is referenced by section number (§5, §17, …), not duplicated.
+
+## Playable examples in guides
+
+Guides embed live Storybook stories so readers can run the example without leaving the page. The theme renders a fenced `iframe` block into a sandboxed embed (`allow-scripts allow-same-origin`); its config grammar is `<url> key=value`:
+
+````markdown
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-html-adapter--matrix-3-d title="Live demo — HTML adapter" height=470 themed=false
+```
+````
+
+Conventions:
+
+- **Protocol-relative URL pinned to the published host** (`//johnsonjo4531.github.io/…`): the theme only accepts `https://` or `//` URLs, and on GitHub Pages this resolves same-origin to the published Storybook. Locally, `build-docs` injects `docs/embed-host-rewrite.js`, a no-op on GitHub Pages that rewrites such URLs to same-origin paths so a locally served copy of `site/` previews embeds against the local build.
+- Point at `storybook/iframe.html?id=<story-id>` — the bare story canvas with its transport buttons (play/pause/reset/reverse/cancel), so the embed is playable. The full story page additionally exposes arg controls, so pair each embed with an "Open in Storybook" link using the manager's **canonical** route form: `[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/<story-id>)`. A bare `?id=<story-id>` does **not** work: the manager ignores it, lands on whichever story was opened first, and produces a broken canvas. Use absolute published-host URLs (like embeds do) — relative `../../storybook/` links resolve wrong when a server serves guide pages without a trailing slash, and the theme rewrites root-relative `/…` paths under its own docs base.
+- **Pair every embed with a Vanilla TypeScript link.** Storybook runs on one UI renderer per build (`react-vite`), so plain-TypeScript stories can't live beside the React ones; the vanilla twins instead ship in a standalone Vite gallery at `/keyframe-flow/examples/` (built by `make build-gallery` from `examples/gallery/`). Every example module under `examples/vanilla/` imports only `keyframe-flow` and DOM APIs — never React. Gallery ids mirror Storybook story ids, so each embed gains a relative link below it: `[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/<story-id>)`. To add an example: write the vanilla mount in `examples/vanilla/`, register it (id, title, section, args mirroring the story defaults, both sources via Vite `?raw` imports) in `examples/gallery/examples.ts`, and add the docs link.
+- `themed=false` opts out of the theme's automatic `?theme-id=` append (the URL already carries a query string; Storybook manages its own theme).
+- Height: \~380 px for canvas-only stories, \~470 px when transport buttons and a state readout render below the animation.
+
+Embeds resolve against the built Storybook, so a docs page's embeds only work when both surfaces are built (`make build`). To preview the whole site — docs, Storybook, and the examples gallery — under the path prefix the published URLs use, run:
+
+```sh
+make preview-site   # http://localhost:4173/keyframe-flow/
+```
+
+The target symlinks `site/` into `.preview/keyframe-flow/` (the site's absolute `/keyframe-flow/` base paths need that name at the served root) and serves it with Python's stdlib server, so nothing else needs to run. Avoid "clean URL" static hosts like `serve`: they 301-redirect `*.html` requests to extensionless paths and **drop query strings**, which breaks Storybook's `iframe.html?id=<story-id>` embeds ("No Preview"). GitHub Pages keeps query strings, so published embeds are unaffected.
 
 ## JSDoc rules for public exports
 

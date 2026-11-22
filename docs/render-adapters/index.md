@@ -23,6 +23,14 @@ slide.attach(logger).play();
 
 Adapters **own rendering state only** — they never touch playback time or lifecycle (§3.6), and disposing a playback never destroys the host's element, context, or GPU resources (Appendix B.8). An optional `dispose()` hook on the target lets adapters release whatever _they_ allocated; it runs at most once.
 
+The recorder below is a pure structural target — an object literal with just `setTransform` — counting every matrix the engine submits:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-custom-structural-target--matrix-recorder" title="Live demo — custom structural target recording matrices" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-custom-structural-target--matrix-recorder)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-custom-structural-target--matrix-recorder) for the target's source.
+
 ## HTML — `target.html(element)`
 
 Writes CSS `matrix3d()` values in column-major argument order — no transposition, verified against the browser's own CSS parser:
@@ -37,6 +45,14 @@ Because the adapter owns the inline transform property, any pre-existing `transf
 target.html(box, { transformOrigin: "0 0" });
 ```
 
+The live demo shows the exact `matrix3d()` string written to the element's `style.transform`, read back from the DOM:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-html-adapter--matrix-3-d" title="Live demo — HTML adapter writing matrix3d" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-html-adapter--matrix-3-d)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-html-adapter--matrix-3-d) to switch the transform-origin.
+
 ## SVG — `target.svg(element)`
 
 Writes the SVG 1.1 `transform="matrix(a, b, c, d, e, f)"` attribute mapped from the matrix's column vectors. SVG is inherently 2D affine here: Z and perspective members are not expressible and are dropped by design (§17).
@@ -44,6 +60,14 @@ Writes the SVG 1.1 `transform="matrix(a, b, c, d, e, f)"` attribute mapped from 
 ```ts
 slide.attach(target.svg(document.querySelector("g")!));
 ```
+
+The live demo writes the SVG `transform="matrix(a, b, c, d, e, f)"` attribute and shows it updating:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-svg-adapter--matrix-attribute" title="Live demo — SVG adapter writing the matrix attribute" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-svg-adapter--matrix-attribute)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-svg-adapter--matrix-attribute) for the source.
 
 ## Canvas 2D — `target.canvas(context)`
 
@@ -60,6 +84,12 @@ slide.attach(target.canvas(ctx, { perspective: 400 }));
 ```
 
 The projection is exposed as the pure function `projectToCanvas2D(matrix, options)` if you need it in your own draw code.
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-canvas-2d-adapter--projected-motion" title="Live demo — Canvas 2D adapter with projected CTM" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-canvas-2d-adapter--projected-motion)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-canvas-2d-adapter--projected-motion) to read the fitted `e`/`f` translation live.
 
 ## WebGL — `target.webgl(options)`
 
@@ -79,6 +109,14 @@ slide.attach(
 // `copyMatrixValuesTo(out)` fills an existing buffer without allocating.
 ```
 
+The story owns the GL context and draw loop; the adapter just keeps the `uModel` uniform fresh each frame — watch the quad transform:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-webgl-adapter--uniform-upload" title="Live demo — WebGL adapter uploading a mat4 uniform" height="520" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-webgl-adapter--uniform-upload)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-webgl-adapter--uniform-upload) for the shader and draw code.
+
 ## WebGPU — `target.webgpu(options)`
 
 Identical shape to WebGL for WGSL hosts: the same column-major layout matches `mat4x4<f32>` uniforms element-for-element (§15). Device, queue, and command encoder ownership stay entirely host-side — encode your draw calls in `onTransform`.
@@ -92,6 +130,14 @@ slide.attach(
   }),
 );
 ```
+
+This story stays device-free — it shows exactly the column-major values a `queue.writeBuffer` call would receive each frame:
+
+<Embed src="//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=targets-webgpu-adapter--uniform-write" title="Live demo — WebGPU adapter uniform buffer write values" height="470" themed="false" />
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/targets-webgpu-adapter--uniform-write)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/targets-webgpu-adapter--uniform-write) for the source.
 
 ## Ownership and disposal semantics (§17.2)
 
