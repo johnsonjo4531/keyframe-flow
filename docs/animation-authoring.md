@@ -186,6 +186,8 @@ for the three input animations.
 - [Easing & interpolation](../easing-interpolation/) — how values move
   _between_ keyframes.
 - [Playback & lifecycle](../playback-lifecycle/) — running definitions.
+- [Timeline & choreography](../timeline-choreography/) — scheduling several animations over one
+  shared time axis.
 - [React Integration](../react-integration/) — `useKeyframePlayback` and
   `<Animated>` for component apps.
 

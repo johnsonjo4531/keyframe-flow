@@ -1,7 +1,7 @@
 ---
 title: React Integration
 group: Guides
-order: 6
+order: 7
 ---
 
 # React Integration

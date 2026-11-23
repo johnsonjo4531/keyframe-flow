@@ -118,7 +118,6 @@ Future targets:
 
 Adapters do not own animation time or playback lifecycle.
 
-
 ### 3.7 Timeline Composition (Future)
 
 A future Timeline subsystem coordinates multiple independently defined animations over a shared time axis.
@@ -632,7 +631,6 @@ Alternate playback reverses direction between iterations.
 
 Repetition is handled by the playback engine rather than by duplicating animation definitions or keyframes.
 
-
 ### 13.1 Repetition Semantics (Clarification and Future API)
 
 The existing repetition capability should use consistent semantics for both Animation and future Timeline definitions.
@@ -676,7 +674,6 @@ const animation = Animation.combine([move, rotate, scale]);
 Property tracks are the preferred underlying composition model. A convenience combination API can be provided on top of that model.
 
 Full animation groups and nested timelines are not part of the initial release.
-
 
 ### 14.1 Timeline Composition (Future)
 
@@ -866,7 +863,6 @@ Playback-rate changes must preserve continuity relative to the current timestamp
 
 The scheduler should avoid unnecessary updates when no playback instances are active.
 
-
 ### 16.1 Timeline Playback and Shared Time (Future)
 
 A Timeline should execute through the existing Playback and centralized scheduling architecture rather than introducing a separate animation clock for every child.
@@ -1016,7 +1012,6 @@ The initial release will not attempt to provide:
 
 These capabilities may be introduced as separate extensions or future releases.
 
-
 ### 19.1 Timeline and Choreography Non-Goals (Initial Release)
 
 The initial release continues to defer full Timeline composition and nested animation groups as stated above.
@@ -1096,7 +1091,6 @@ These are future capabilities. Their design should preserve the existing Animati
 - Single GitHub Pages site hosting documentation and storybook side by side under one deployment.
 - Makefile-driven documentation/storybook builds with a `github_pages_deploy` target for the combined site.
 
-
 ### 20.1 Future Timeline Milestones
 
 When Timeline composition is implemented, the recommended development order is:
@@ -1129,7 +1123,6 @@ The design is successful if:
 - Custom clocks, schedulers, and rendering systems can be integrated without modifying the core.
 
 ---
-
 
 ### 21.1 Future Timeline Success Criteria
 
@@ -1176,27 +1169,26 @@ The Timeline design will be successful if:
 | Animation groups           | Deferred                                    |
 | Package distribution       | Unified package initially                   |
 
-
 ### Appendix A.1: Timeline Decisions to Preserve
 
-| Area | Recommended future decision |
-| --- | --- |
-| Composition type | Separate `Timeline` definition |
-| Child types | Animation or nested Timeline |
-| Child timing | Independent start time and intrinsic duration |
-| Time units | Milliseconds for timeline placement and gaps |
-| Composition | Absolute placement, sequence, parallel, nested |
-| Stagger | Convenience helper compiling to scheduled entries |
-| Repeat scope | Playback, individual segment, or whole Timeline |
-| Iteration count | Total iterations including the first |
-| Repeat direction | Normal or alternate |
-| Repeat delay | Gap between iterations, not before first play |
-| Infinite repetition | Explicit and non-completing |
-| Duration | Calculated from child timing; may be infinite |
-| Sampling | Deterministic at a timeline elapsed time |
-| Rendering | Target-independent definition; adapters render output |
-| Generator choreography | Optional authoring style, eagerly compiled |
-| Additive composition | Deferred; no implicit additive behavior |
+| Area                   | Recommended future decision                           |
+| ---------------------- | ----------------------------------------------------- |
+| Composition type       | Separate `Timeline` definition                        |
+| Child types            | Animation or nested Timeline                          |
+| Child timing           | Independent start time and intrinsic duration         |
+| Time units             | Milliseconds for timeline placement and gaps          |
+| Composition            | Absolute placement, sequence, parallel, nested        |
+| Stagger                | Convenience helper compiling to scheduled entries     |
+| Repeat scope           | Playback, individual segment, or whole Timeline       |
+| Iteration count        | Total iterations including the first                  |
+| Repeat direction       | Normal or alternate                                   |
+| Repeat delay           | Gap between iterations, not before first play         |
+| Infinite repetition    | Explicit and non-completing                           |
+| Duration               | Calculated from child timing; may be infinite         |
+| Sampling               | Deterministic at a timeline elapsed time              |
+| Rendering              | Target-independent definition; adapters render output |
+| Generator choreography | Optional authoring style, eagerly compiled            |
+| Additive composition   | Deferred; no implicit additive behavior               |
 
 ### Appendix B.1: Additional Timeline Boundary
 

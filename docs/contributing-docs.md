@@ -177,7 +177,26 @@ as a broken build. Common sources:
 Stories live in `examples/stories/` and mount a real keyframe-flow animation
 into a React host with working controls (duration, easing, play/pause). Add a
 story when a feature ships without one; naming follows the guide structure
-(e.g. `Playback/Lifecycle`).
+(e.g. `Playback/Lifecycle`, `Timeline/Sequence`). Story sections are discovered
+from `meta.title`, so a new top-level section (`Timeline/…`) appears in the
+sidebar automatically — and every story in it should get a vanilla twin under
+the matching gallery section (`section: "Timeline"` in
+`examples/gallery/examples.ts`).
+
+Shared chrome lives once per concern: animation stories build handles with
+`useKeyframePlayback` from `keyframe-flow/react`, Timeline stories with the
+story-side `useTimelinePlayback` twin (`examples/stories/timeline-story.tsx`),
+and both render through the structurally typed `Transport`/`Readout` pair in
+`examples/stories/playback-story.tsx`. Example plumbing stays in `examples/`;
+the engine stays in the library.
+
+The `Performance/Stress Test` example (`performance-stress-test--heavy-field`,
+gallery section `"Performance"`) is the exception to the hook pattern: it
+manages many playbacks imperatively on both surfaces, because elements are
+added at runtime — new dots attach onto the running engine without recreating
+existing playbacks. The shared chrome still drives them via synthesized
+group-view handles (`PlaybackHandleLike` / `TransportablePlayback`) that fan
+transport actions out to every playback.
 
 The Code panel is enabled globally (`parameters.docs.codePanel: true` in
 `.storybook/preview.tsx`, backed by the `@storybook/addon-docs` addon) so each

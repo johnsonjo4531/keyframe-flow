@@ -14,8 +14,13 @@ import { mount as manualRenderLoopMount } from "../vanilla/manual-render-loop.ts
 import { mount as propertyLevelMount } from "../vanilla/property-level.ts";
 import { mount as repetitionMount } from "../vanilla/repetition.ts";
 import { mount as slerpVsAngularMount } from "../vanilla/slerp-vs-angular.ts";
+import { mount as stressTestMount } from "../vanilla/stress-test.ts";
 import { mount as supersedeMount } from "../vanilla/supersede.ts";
 import { mount as svgTargetMount } from "../vanilla/svg-target.ts";
+import { mount as timelineParallelMount } from "../vanilla/timeline-parallel.ts";
+import { mount as timelineRepeatMount } from "../vanilla/timeline-repeat.ts";
+import { mount as timelineSequenceMount } from "../vanilla/timeline-sequence.ts";
+import { mount as timelineStaggerMount } from "../vanilla/timeline-stagger.ts";
 import { mount as webglTargetMount } from "../vanilla/webgl-target.ts";
 import { mount as webgpuTargetMount } from "../vanilla/webgpu-target.ts";
 import type { VanillaMount } from "../vanilla/harness.ts";
@@ -36,8 +41,13 @@ import manualRenderLoopTs from "../vanilla/manual-render-loop.ts?raw";
 import propertyLevelTs from "../vanilla/property-level.ts?raw";
 import repetitionTs from "../vanilla/repetition.ts?raw";
 import slerpVsAngularTs from "../vanilla/slerp-vs-angular.ts?raw";
+import stressTestTs from "../vanilla/stress-test.ts?raw";
 import supersedeTs from "../vanilla/supersede.ts?raw";
 import svgTargetTs from "../vanilla/svg-target.ts?raw";
+import timelineParallelTs from "../vanilla/timeline-parallel.ts?raw";
+import timelineRepeatTs from "../vanilla/timeline-repeat.ts?raw";
+import timelineSequenceTs from "../vanilla/timeline-sequence.ts?raw";
+import timelineStaggerTs from "../vanilla/timeline-stagger.ts?raw";
 import webglTargetTs from "../vanilla/webgl-target.ts?raw";
 import webgpuTargetTs from "../vanilla/webgpu-target.ts?raw";
 
@@ -56,8 +66,13 @@ import manualRenderLoopTsx from "../stories/sampling/manual-render-loop.stories.
 import propertyLevelTsx from "../stories/authoring/property-level.stories.tsx?raw";
 import repetitionTsx from "../stories/playback/repetition.stories.tsx?raw";
 import slerpVsAngularTsx from "../stories/interpolation/slerp-vs-angular.stories.tsx?raw";
+import stressTestTsx from "../stories/performance/stress-test.stories.tsx?raw";
 import supersedeTsx from "../stories/playback/supersede.stories.tsx?raw";
 import svgTargetTsx from "../stories/targets/svg-target.stories.tsx?raw";
+import timelineParallelTsx from "../stories/timeline/parallel.stories.tsx?raw";
+import timelineRepeatTsx from "../stories/timeline/repeat.stories.tsx?raw";
+import timelineSequenceTsx from "../stories/timeline/sequence.stories.tsx?raw";
+import timelineStaggerTsx from "../stories/timeline/stagger.stories.tsx?raw";
 import webglTargetTsx from "../stories/targets/webgl-target.stories.tsx?raw";
 import webgpuTargetTsx from "../stories/targets/webgpu-target.stories.tsx?raw";
 
@@ -253,6 +268,65 @@ export const EXAMPLES: readonly GalleryExample[] = [
     reactSource: manualRenderLoopTsx,
   },
   {
+    id: "timeline-sequence--entrance",
+    title: "Sequence: rows enter back to back",
+    section: "Timeline",
+    description:
+      "`sequence` places children by their intrinsic durations plus a gap — never re-times them (§14.1).",
+    mount: timelineSequenceMount,
+    tsFile: "timeline-sequence",
+    args: { gap: 120 },
+    tsSource: timelineSequenceTs,
+    reactSource: timelineSequenceTsx,
+  },
+  {
+    id: "timeline-parallel--endless-scene",
+    title: "Parallel: finite children in an endless scene",
+    section: "Timeline",
+    description:
+      "Children start together with independent durations; an infinite child makes the horizon infinite (§14.1, §14.3).",
+    mount: timelineParallelMount,
+    tsFile: "timeline-parallel",
+    args: { spinDuration: 2400 },
+    tsSource: timelineParallelTs,
+    reactSource: timelineParallelTsx,
+  },
+  {
+    id: "timeline-stagger--card-fan",
+    title: "Stagger: a card fan from one definition",
+    section: "Timeline",
+    description:
+      "`stagger` compiles to ordinary entries at `i × delay`, binding one render target each (§14.1).",
+    mount: timelineStaggerMount,
+    tsFile: "timeline-stagger",
+    args: { delay: 100, order: "forward" },
+    tsSource: timelineStaggerTs,
+    reactSource: timelineStaggerTsx,
+  },
+  {
+    id: "timeline-repeat--alternate-pulse",
+    title: "Repeat: alternating pulse without snapping",
+    section: "Timeline",
+    description: '`direction: "alternate"` ping-pongs progress between iterations (§13.1).',
+    mount: timelineRepeatMount,
+    tsFile: "timeline-repeat",
+    args: { layout: "pulse", iterations: 6, delay: 300 },
+    tsSource: timelineRepeatTs,
+    reactSource: timelineRepeatTsx,
+  },
+  {
+    id: "timeline-repeat--repeated-choreography",
+    title: "Repeat: a whole sequence repeated with gaps",
+    section: "Timeline",
+    description:
+      "`repeat` wraps a child in one compact entry — terminal values hold across each delay gap (§14.2, §13.1).",
+    mount: timelineRepeatMount,
+    tsFile: "timeline-repeat",
+    args: { layout: "choreography", iterations: 3, delay: 300 },
+    tsSource: timelineRepeatTs,
+    reactSource: timelineRepeatTsx,
+  },
+  {
     id: "targets-custom-structural-target--matrix-recorder",
     title: "Custom structural target recording matrices",
     section: "Targets",
@@ -317,5 +391,17 @@ export const EXAMPLES: readonly GalleryExample[] = [
     args: { duration: 1600 },
     tsSource: webgpuTargetTs,
     reactSource: webgpuTargetTsx,
+  },
+  {
+    id: "performance-stress-test--heavy-field",
+    title: "Stress test: heavy animated field",
+    section: "Performance",
+    description:
+      "One shared definition, hundreds of independent playbacks on one centralized frame loop — add elements live and watch FPS hold (§16).",
+    mount: stressTestMount,
+    tsFile: "stress-test",
+    args: { count: 150, duration: 900 },
+    tsSource: stressTestTs,
+    reactSource: stressTestTsx,
   },
 ];

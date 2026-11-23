@@ -25,6 +25,13 @@
     "menu": [
       { "id": "home", "title": "Home" },
       { "title": "Storybook", "link": "/keyframe-flow/storybook/", "icon": "lucide:play-circle" },
+      // Vanilla-TypeScript examples gallery (T62): pinned on every docs page
+      // like Storybook — same menu mechanism, absolute project-site path.
+      {
+        "title": "Vanilla TS",
+        "link": "/keyframe-flow/examples/",
+        "icon": "simple-icons:typescript"
+      },
       {
         "title": "llms.txt",
         "link": "https://johnsonjo4531.github.io/keyframe-flow/docs/llms.txt",

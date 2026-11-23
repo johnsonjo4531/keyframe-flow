@@ -1,15 +1,29 @@
 import type * as React from "react";
-import type { KeyframePlaybackHandle } from "keyframe-flow/react";
+import type { PlaybackResult, PlaybackState } from "keyframe-flow";
 
 /**
  * Shared story chrome: the transport buttons and live state readout. The
- * playback plumbing itself lives in the library — stories build a handle with
- * `useKeyframePlayback` from `keyframe-flow/react` (T52/T53), and these
- * components render against it.
+ * playback plumbing itself lives in the library — animation stories build a
+ * handle with `useKeyframePlayback` from `keyframe-flow/react` (T52/T53) and
+ * Timeline stories with the story-side `useTimelinePlayback` twin — and these
+ * components render against either, so they stay structurally typed.
  */
 
+/** Structural view of any playback handle the chrome can drive. */
+export interface PlaybackHandleLike {
+  readonly state: PlaybackState;
+  readonly currentTime: number;
+  readonly iterationCount: number;
+  readonly result: PlaybackResult | undefined;
+  play(): void;
+  pause(): void;
+  reset(): void;
+  reverse(): void;
+  cancel(): void;
+}
+
 /** Live readout of playback state for story panels. */
-export function Readout({ handle }: { handle: KeyframePlaybackHandle }): React.ReactElement {
+export function Readout({ handle }: { handle: PlaybackHandleLike }): React.ReactElement {
   return (
     <div
       style={{
@@ -31,8 +45,8 @@ export function Readout({ handle }: { handle: KeyframePlaybackHandle }): React.R
   );
 }
 
-/** Standard transport buttons wired to a {@link KeyframePlaybackHandle}. */
-export function Transport({ handle }: { handle: KeyframePlaybackHandle }): React.ReactElement {
+/** Standard transport buttons wired to a {@link PlaybackHandleLike}. */
+export function Transport({ handle }: { handle: PlaybackHandleLike }): React.ReactElement {
   const button = { padding: "4px 10px", cursor: "pointer" } as const;
   return (
     <div style={{ display: "flex", gap: 8, marginTop: 8 }}>

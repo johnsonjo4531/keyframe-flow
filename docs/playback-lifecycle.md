@@ -152,7 +152,29 @@ The default engine is created lazily on first use with the system clock and a
 requestAnimationFrame-based scheduler (falling back to timers in Node), so
 normal usage needs no setup.
 
+## Scaling many playbacks
+
+Because one centralized scheduler drives every active playback (§16), scaling
+from one animation to hundreds costs a single frame-loop subscription, not one
+per element — the stress test below animates a field of elements from one
+shared definition and lets you pile on more live, with measured FPS and frame
+time so you can see where scaling starts to cost. Pausing everything shows the
+other side of the contract too: when nothing is active, the scheduler stops
+requesting frames entirely.
+
+```iframe
+//johnsonjo4531.github.io/keyframe-flow/storybook/iframe.html?id=performance-stress-test--heavy-field title="Live demo — performance stress test" height=600 themed=false
+
+```
+
+[▶ Vanilla TypeScript implementation](https://johnsonjo4531.github.io/keyframe-flow/examples/#/example/performance-stress-test--heavy-field)
+
+[Open in Storybook](https://johnsonjo4531.github.io/keyframe-flow/storybook/?path=/story/performance-stress-test--heavy-field)
+for the arg controls over starting element count and duration.
+
 ## See also
 
+- [Timeline & choreography](../timeline-choreography/) — scheduling several animations over one
+  shared time axis with a single playback.
 - [Render adapters](../render-adapters/) — what targets receive and own.
 - Live lifecycle playground in the [Storybook examples](../../storybook/).

@@ -1,4 +1,4 @@
-import type { Playback } from "keyframe-flow";
+import type { PlaybackResult, PlaybackState } from "keyframe-flow";
 
 /**
  * Shared plumbing for the vanilla-TypeScript example twins (T54). These
@@ -94,12 +94,31 @@ export function codeLine(parent: HTMLElement): HTMLElement {
 }
 
 /**
- * Transport buttons + live state readout driven by a `Playback` — the vanilla
- * twin of the React `Transport`/`Readout` pair, with identical semantics:
- * frame-mirrored state that re-kicks after every control action so discrete
- * actions (play after finish, reset, seek) never leave a stale readout.
+ * Structural view of anything the transport chrome can drive — `Playback` and
+ * `TimelinePlayback` both satisfy it, so the vanilla twins share one set of
+ * controls regardless of which definition they animate (§12).
  */
-export function mountTransport(parent: HTMLElement, playback: Playback): Cleanup {
+export interface TransportablePlayback {
+  readonly state: PlaybackState;
+  readonly currentTime: number;
+  readonly iterationCount: number;
+  readonly reversed: boolean;
+  readonly finished: Promise<PlaybackResult>;
+  play(): void;
+  pause(): void;
+  reverse(): void;
+  seek(timeMs: number): void;
+  cancel(): void;
+}
+
+/**
+ * Transport buttons + live state readout driven by a playback handle — the
+ * vanilla twin of the React `Transport`/`Readout` pair, with identical
+ * semantics: frame-mirrored state that re-kicks after every control action so
+ * discrete actions (play after finish, reset, seek) never leave a stale
+ * readout. Works for animation playbacks and timeline playbacks alike.
+ */
+export function mountTransport(parent: HTMLElement, playback: TransportablePlayback): Cleanup {
   const buttons = document.createElement("div");
   buttons.style.display = "flex";
   buttons.style.gap = "8px";

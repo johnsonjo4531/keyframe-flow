@@ -73,6 +73,19 @@ export type {
 export { systemClock, ManualClock, createFrameScheduler, ManualScheduler } from "./timing/index.ts";
 export type { Clock, Scheduler } from "./timing/index.ts";
 
+export { Timeline, TimelinePlayback } from "./timeline/index.ts";
+export type {
+  StaggerOrder,
+  TimelineChild,
+  TimelineChildInput,
+  TimelineEntry,
+  TimelineEntryInput,
+  TimelineRepeatOptions,
+  TimelineSample,
+  TimelineSequenceOptions,
+  TimelineStaggerOptions,
+} from "./timeline/index.ts";
+
 export { target } from "./targets/index.ts";
 export {
   matrixToCssTransform,

@@ -109,6 +109,43 @@ The docs now embed playable examples, but three gaps remain: markdown links with
 
 61. [x] Publish machine-readable docs indexes for AI tools: enable clean-jsdoc-theme's `llmsTxt` option in `typedoc.json` so the docs build emits `llms.txt` (an llmstxt.org index — one section per sidebar group, each entry linking the page's companion Markdown) and `llms-full.txt` (all page bodies concatenated) at the docs root (`/keyframe-flow/docs/llms.txt`, `/keyframe-flow/docs/llms-full.txt`); verify both files list every guide and API page with absolute published-host URLs; link them in the documentation so people know they exist and how to use them — a short "AI & LLM tools" section in `docs/getting-started.md` explaining the llms.txt convention (hand the index to any model, or the full file when context budget allows) with links to both files, a note in `docs/contributing-docs.md` that new pages appear in the indexes automatically via their companion `.md`, and menu discoverability if the theme supports it cleanly.
 
+## Milestone 13: Pinned Vanilla Examples Link in Docs & Landing Page
+
+The vanilla-TypeScript examples gallery lives at `/keyframe-flow/examples/` (T56) but is only reachable from links buried inside individual guide embeds. It should be discoverable the same way Storybook is — a pinned external link on every documentation page — and called out on the site landing page.
+
+62. [x] Pin the vanilla-TypeScript examples gallery as an external menu link on every docs page: add a `{ "title": "Vanilla TS", "link": "/keyframe-flow/examples/", "icon": ... }` entry to `cleanJsdocTheme.menu` in `typedoc.json` — the same mechanism that pins Storybook into the header nav of every generated page; also add a third card linking to `/keyframe-flow/examples/` on the landing page (`docs/site-index.html`) alongside Documentation and Storybook, describing it as the framework-free examples gallery. Rebuild `site/docs`, verify the menu item renders in the built HTML nav, and confirm both links resolve to `/keyframe-flow/examples/`.
+
+## Milestone 14: Timeline API (vision.md addendum)
+
+`design-docs/vision.md` gained a Timeline addendum (§3.7, §13.1, §14.1–§14.4, §16.1, §19.1, §20.1, §21.1, Appendix A.1/B.1/C): a platform-independent temporal composition definition that schedules multiple animation/timeline definitions over one shared time axis — absolute placement, sequence, parallel, nesting, compact repetition at segment and whole-timeline level, staggering, deterministic sampling, and Timeline Playback through the existing centralized scheduler — without changing the meaning of `Animation`/`Playback`/`Scheduler`/`RenderTarget` (Appendix B.1). Implement following the §20.1 development order; the illustrative snippets are not final signatures but stay close to them where practical.
+
+63. [x] Core Timeline definition and child-entry representation (§3.7, Appendix A.1): a new `src/timeline/` module with an immutable `Timeline` class holding eagerly normalized frozen entries `{ name?, source: Animation | Timeline, at (ms), target?, repeat {iterations, direction, delay}, duration }`; validate children are only `Animation`/`Timeline` instances, finite non-negative placement times and delays; expose `duration`; the definition is DOM-free and timer-free — pure data (§2 principle 1).
+64. [x] Composition forms (§14.1): `Timeline.from({ name: { animation, target?, at } })` for absolute placement (bare `Animation`/`Timeline` values accepted as shorthand), `Timeline.sequence(children, { gap? })` placing children back to back by their intrinsic durations plus an optional gap, `Timeline.parallel(children)` starting children together with independent durations; nested timelines are first-class children and compose naturally; sequence must explicitly reject an infinite-duration child that would make later siblings unreachable (§14.3); placement never re-times or normalizes child durations.
+65. [x] Repetition semantics & repeat segments (§13.1, §14.2): one consistent options shape — `iterations` is the total count including the first (finite positive integers only; `"infinite"`/`Infinity` explicit and non-completing), `direction` normal/alternate (+ reverse modes for parity with playback), `delay` is the gap _between_ iterations and never delays the first; `Timeline.repeat(child, { iterations, delay?, direction? })` returns a compact single-entry timeline wrapping the child — repeated segments are repeat operations, never eagerly expanded per iteration (§14.2); alternate reverses progress without snapping to the beginning between alternating iterations (§13.1).
+66. [x] Stagger helper (§14.1): `Timeline.stagger(child, items, { delay, order? })` where `items` is a count or an array of render targets (each entry binds one), expanding into ordinary scheduled entries at `i × delay` with explicit `"forward"`/`"reverse"` ordering — no special runtime node; it compiles to the same scheduling model everything else uses.
+67. [x] Deterministic sampling & duration calculation (§14.3, §14.4): finite timelines expose `duration = max(at + repeatedDuration)` with per-entry repeat duration `D × N + R × (N − 1)` (delay omitted after the final iteration); an infinite parallel child yields infinite duration; `timeline.sample(timeMs)` evaluates every started child at `childLocalTime = timeMs − childStart` with no scheduler — unstarted children produce nothing, completed children follow their endpoint behavior, repeat mapping handles delay-gap holds and alternate direction, nested timelines flatten into `{ name?, target?, localTime, transform }` samples; same-target children keep replacement semantics resolved by explicit entry order, never additive composition (§14.4).
+68. [x] Timeline playback through the existing scheduler (§16.1): `timeline.attach(options?)` creates a `TimelinePlayback` owning one shared transport — play/pause/reverse/seek(ms)/seekProgress(p)/playbackRate/cancel/dispose plus the per-run `finished` promise — with §12 lifecycle parity to `Playback`; it registers as a single scheduled unit on the centralized `PlaybackEngine`, children derive local time from the shared timeline time and never create their own clocks (Appendix B.1); playback-level repetition composes independently with segment repeats (§14.2, §16.1); every entry target follows §14 replacement semantics — starting supersedes existing playbacks on those targets — and disposal never destroys adapter-owned render objects (Appendix B.8).
+69. [x] Timeline QA: unit tests across the whole surface (placement/sequence-gap/parallel/nesting, duration formula incl. repeat delays and infinite parallel, sequence rejecting unreachable infinite children, repeat mapping — gap holds, alternate ping-pong, `Infinity`, outer × inner repeat composition, stagger ordering, sampling determinism with before-start/completed edges, same-target ordering, playback lifecycle via the `ManualClock`/`ManualScheduler` harness incl. supersede); full JSDoc with runnable `@example`s on every export so TypeDoc passes `strict: true`; export from `src/index.ts`; `make test` green.
+
+## Milestone 15: Timeline Documentation, Stories & Vanilla Twins
+
+The Timeline API (Milestone 14) currently exists only as the generated API reference. Following the Milestones 6/9/10 pattern, it needs a prose guide in the docs sidebar with playable embeds, Storybook stories demonstrating the composition forms, and vanilla-TypeScript twins registered in the examples gallery.
+
+70. [x] Author Storybook stories for the Timeline API under `examples/stories/timeline/`: **Sequence** (entrance: logo → heading → subtitle with gap), **Parallel** (infinite repeating background spin + finite children with independent durations), **Stagger** (card fan with delay interval and forward/reverse order), and **Repeat** (alternate ping-pong pulse + repeated sequence with repeat delay) — one story per composition form, each driving several real host elements through `Timeline.from`/entry targets and the shared transport/readout chrome. The timeline plumbing lives in a small story-side helper (`useTimelinePlayback` in `examples/stories/timeline-story.tsx`) mirroring the library hook's attach/re-attach/dispose + frame-mirrored readout semantics; stories stay example chrome, engine stays in the library. Every story gets a substantive Docs description linking its guide section; ids follow the existing `<section>-<name>--<story>` convention for deep links.
+71. [x] Give every Timeline story a vanilla-TypeScript twin (`examples/vanilla/timeline-*.ts`, no React imports — pure `keyframe-flow` + DOM) driven through the shared harness, widening `mountTransport` to a structural playback contract so it accepts both `Playback` and `TimelinePlayback`; register all four in the gallery (`examples/gallery/examples.ts`) with live mounts, story-default args, and `?raw` sources for the TS ↔ React twin toggle.
+72. [x] Write the prose guide `docs/timeline-choreography.md` ("Timeline & Choreography", Guides group — order 6 ahead of React Integration, which becomes 7; authored as `docs/timeline.md` but renamed because the `/keyframe-flow/docs/timeline/` slug belongs to the generated `Timeline` API page): the definition/playback boundary table from §3.7/Appendix B.1, authoring forms with snippets matching the embedded stories (`from`, `sequence` + gap, `parallel`, `stagger`, `repeat`), duration rules incl. the `D × N + R × (N − 1)` formula and infinite-child handling (§14.3), deterministic sampling and same-target replacement ordering (§14.4), and Timeline Playback over the shared scheduler with §12 transport parity (§16.1). Embed one live story per section via the iframe fence with paired "Open in Storybook" (`?path=/story/`) and "▶ Vanilla TypeScript implementation" gallery links, following `docs/contributing-docs.md` conventions; cross-link from the guides' "what to read next" lists.
+73. [x] Verify end-to-end: rebuild `site/docs`, `site/storybook`, and `site/examples`; Playwright-check that every new story renders and animates with zero console errors, each guide embed loads its exact story locally under the `/keyframe-flow/` prefix, and each gallery page mounts its live demo with both source tabs; note the Timeline section in `docs/contributing-docs.md`'s registration conventions. `make test` stays green.
+
+## Milestone 16: Performance Stress Test Examples
+
+Every example so far animates a handful of elements, which doesn't show what the library does under load — one centralized scheduler driving many playbacks (§16) is exactly where its performance story lives. Add stress-test examples to both surfaces (Storybook and the vanilla-TypeScript gallery) that animate large numbers of elements and let the user dial the load up interactively to feel how well the engine scales.
+
+74. [x] Add a Storybook stress-test story (`examples/stories/performance/stress-test.stories.tsx`): animate many host elements (HTML divs through `target.html`, staggered via `Timeline.stagger` or per-element playbacks) with a Storybook arg control for the starting element count, plus interactive controls to add more animated elements at runtime (e.g. +10 / +100 / custom-count buttons) without recreating the existing playbacks — new elements attach on the fly and join the running animation. Include a live performance readout in the story chrome: element/active-playback count, measured FPS, and average frame time (via `performance.now()` deltas in a rAF mirror loop), so the cost of scaling up is visible as you click. Keep engine plumbing in the library (shared transport/readout chrome pattern from `playback-story.tsx`); stories stay example chrome.
+
+75. [x] Give the stress test its vanilla-TypeScript twin (`examples/vanilla/stress-test.ts`, no React imports — pure `keyframe-flow` + DOM) driven through the shared harness, with the same interactive "add more animated elements" controls (button UI in the mount, count/FPS/frame-time readout), and register it in the gallery (`examples/gallery/examples.ts`) with its live mount and `?raw` TS ↔ React twin sources following the existing per-example registration convention.
+
+76. [x] Verify the stress examples: Playwright-check that both surfaces render with zero console errors and that adding elements mid-run animates them immediately without stalling or duplicating existing playbacks (dispose on unmount tears down every playback — no leaked scheduled units); sanity-sweep element counts (e.g. 100 → 1,000+) and confirm FPS stays reasonable at scale with the centralized scheduler; note the new story/gallery ids in `docs/contributing-docs.md` registration conventions and cross-link the stress test from the performance-relevant guide section(s). `make test` stays green.
+
 ## Phases
 
 ## Phase 1 — Math core and Matrix4
@@ -186,3 +223,23 @@ The docs now embed playable examples, but three gaps remain: markdown links with
 ## Phase 19 — LLM-readable documentation (llms.txt)
 
 - [x] Complete: T61
+
+## Phase 20 — Pinned vanilla examples link in docs & landing page
+
+- [x] Complete: T62
+
+## Phase 21 — Timeline definition core
+
+- [x] Complete: T63, T64, T65, T66, T67
+
+## Phase 22 — Timeline playback & QA
+
+- [x] Complete: T68, T69
+
+## Phase 23 — Timeline documentation, stories & vanilla twins
+
+- [x] Complete: T70, T71, T72, T73
+
+## Phase 24 — Performance stress test examples
+
+- [x] Complete: T74, T75, T76

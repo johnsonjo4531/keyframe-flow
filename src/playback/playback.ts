@@ -1,5 +1,6 @@
 import type { Animation } from "../animation/animation.ts";
 import type { RenderTarget } from "../targets/types.ts";
+import { claimTarget, releaseTarget } from "./ownership.ts";
 import { getDefaultEngine, type PlaybackEngine } from "./engine.ts";
 
 /** The lifecycle states of a playback instance (§12). */
@@ -48,9 +49,6 @@ export interface PlaybackOptions {
   /** Engine driving this playback. Defaults to the shared default engine. */
   readonly engine?: PlaybackEngine;
 }
-
-/** Target ownership registry enforcing §14 replacement semantics. */
-const targetOwners = new WeakMap<RenderTarget, Playback>();
 
 const DIRECTION_MODES: readonly PlaybackDirectionMode[] = [
   "normal",
@@ -491,22 +489,20 @@ export class Playback {
   /** §14 replacement semantics: starting here supersedes the current owner. */
   private _claimTarget(): void {
     if (this.target === undefined || this.target === null) return;
-    const owner = targetOwners.get(this.target);
-    if (owner !== undefined && owner !== this) {
-      owner._supersede();
-    }
-    targetOwners.set(this.target, this);
+    claimTarget(this.target, this);
   }
 
   private _releaseTargetOwnership(): void {
     if (this.target === undefined || this.target === null) return;
-    if (targetOwners.get(this.target) === this) {
-      targetOwners.delete(this.target);
-    }
+    releaseTarget(this.target, this);
   }
 
-  /** Superseded by another playback on the same target (§14). */
-  private _supersede(): void {
+  /**
+   * Superseded by another execution instance on the same target (§14). Part of
+   * the internal `TargetOwner` contract shared with `TimelinePlayback`; not
+   * part of the user-facing transport.
+   */
+  supersedeByReplacement(): void {
     if (this._state === "finished" || this._state === "cancelled" || this._state === "disposed") {
       return;
     }
